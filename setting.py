@@ -23,8 +23,6 @@ class Setting(object):
     def __init__(self):
         pass
 
-
-
     @staticmethod
     def get_local_time():
         """获取本地时间"""
@@ -34,13 +32,3 @@ class Setting(object):
     def get_local_date():
         """获取本地日期"""
         return str(datetime.datetime.now()).split(" ")[0]
-
-if __name__ == '__main__':
-    logging.config.fileConfig("logger.conf")
-    logger = logging.getLogger('main')  # 日志
-    logger.setLevel('NOTSET')
-    logger.debug('debug message')
-    logger.info('info message')
-    logger.warn('warn message')
-    logger.error('error message')
-    logger.critical('critical message')
