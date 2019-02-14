@@ -14,7 +14,7 @@ class TestSysMontor(unittest.TestCase):
 
     def test_sys_info(self):
         """测试系统监控"""
-        print "-----系统信息测试-----"
+        print "\n-----系统信息测试-----"
         self.assertIsInstance(self.S.get_sys_info(), dict)
         print "Linux内核版本 :", self.S.get_sys_info()["kernel"]
         print "系统版本 :", self.S.get_sys_info()["system"]
@@ -32,7 +32,7 @@ class TestSysMontor(unittest.TestCase):
         print "系统本地时间 :", self.S.get_local_time()
 
     def test_cpu_monitor(self):
-        print "-----处理器信息-----"
+        print "\n-----处理器信息-----"
         self.assertIsInstance(self.S.get_cpu_info(), list)
         print "CPU信息"
         for c in self.S.get_cpu_info():
@@ -47,7 +47,7 @@ class TestSysMontor(unittest.TestCase):
             print k, ":", cpbc[k], "%"
 
     def test_mem_montor(self):
-        print "-----内存信息-----"
+        print "\n-----内存信息-----"
         self.assertIsInstance(self.S.get_mem_info(), list)
         print "系统总内存(KB) :", self.S.get_mem_info()[0]
         print "空闲内存(KB) :", self.S.get_mem_info()[1]
@@ -58,7 +58,7 @@ class TestSysMontor(unittest.TestCase):
         print "系统内存占用率 :", self.S.calc_mem_percent(), "%"
 
     def test_net_montor(self):
-        print "-----网络信息-----"
+        print "\n-----网络信息-----"
         self.assertIsInstance(self.S.get_all_net_device(), list)
         print "系统网卡 :", " ".join(self.S.get_all_net_device())
         self.assertIsInstance(self.S.get_default_net_device(), str)
@@ -73,6 +73,7 @@ class TestSysMontor(unittest.TestCase):
         print "本地内网IP :", self.S.get_intranet_ip()
 
     def test_dist_montor(self):
+        print "\n-----磁盘信息-----"
         ds = self.S.get_disk_stat(style="G")
         self.assertIsInstance(ds, list)
         for i in ds:
@@ -80,5 +81,5 @@ class TestSysMontor(unittest.TestCase):
             print "文件系统 :", i[1]
             print "磁盘大小(G) :", i[2]
             print "已用大小(G) :", i[3]
-            print "磁盘占用率 :", i[4]
+            print "磁盘占用率 :", i[4], "%"
             print "挂载点 :", i[5]

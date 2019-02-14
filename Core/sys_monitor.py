@@ -288,15 +288,6 @@ class SysMontor(object):
         def get_all_mount_points():
             """获取所有挂载点 - /proc/mounts"""
 
-            """
-            /proc/mounts
-    
-            Before kernel 2.4.19, this file was a list of all the filesystems currently mounted on the system.
-            With the introduction of per-process mount namespaces in Linux 2.4.19 (see mount_namespaces(7)), this file became a link
-            to /proc/self/mounts, which lists the mount points of the process's own mount namespace.
-            The format of this file is documented in fstab(5).
-            """
-
             mount_points = {}
             with open("/proc/mounts", "r") as mounts:
                 for line in mounts.readlines():
@@ -396,7 +387,3 @@ class SysMontor(object):
         except socket.error:
             return "failed"
         return addr
-
-
-if __name__ == '__main__':
-    print SysMontor().test()
