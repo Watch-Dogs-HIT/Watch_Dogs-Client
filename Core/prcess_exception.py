@@ -104,12 +104,13 @@ def wrap_process_exceptions(func):
         try:
             return func(*args, **kwargs)
         except EnvironmentError as err:
+            # 2019.2.15 : 为了配合将函数归类的需求,这里的参数默认改为函数的第二个参数,第一个是self
             # EPERM(Operation not permitted), EACCES(Permission denied)
             if err.errno in (errno.EPERM, errno.EACCES):
-                raise AccessDenied(args[0]) if args else AccessDenied()
+                raise AccessDenied(args[1]) if args else AccessDenied()
             # ESRCH (no such process), ENOENT (no such file or directory)
             if err.errno in (errno.ESRCH, errno.ENOENT, errno.ENOTDIR):
-                raise NoSuchProcess(args[0]) if args else NoSuchProcess()
+                raise NoSuchProcess(args[1]) if args else NoSuchProcess(pid=-1)
             # Note: zombies will keep existing under /proc until they're
             # gone so there's no way to distinguish them in here.
             raise
