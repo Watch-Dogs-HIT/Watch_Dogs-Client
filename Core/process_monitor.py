@@ -12,7 +12,7 @@
 - 获取路径可用大小
 - 获取进程占用内存大小
 - 获取进程磁盘占用(需要root权限)
-- 获取进程网络监控(基于libnethogs,需要读写net文件权限)
+- 获取进程网络监测(基于libnethogs,需要读写net文件权限)
 
 参考资料
 reference   :   https://www.jianshu.com/p/deb0ed35c1c2
@@ -59,24 +59,28 @@ class ProcMontor(object):
     def __init__(self):
         """初始化数据结构、权限信息"""
 
-    def __process_data_init__(self):
-        """初始化进程监控数据结构"""
+    def __process_info_init__(self):
+        """初始化监测环境"""
+        # 初始化系统监测
+        self.SysMonitor = SysMontor()
+        # 获取netlogs环境
+        self.net_monitor_ability = self.is_libnethogs_install()
+        # 监测数据结构初始化
+        self.__monitor_data_init__()
+
+    def __monitor_data_init__(self):
+        """初始化进程监测数据结构"""
         # 用于存放所有进程信息相关的数据结构
-        all_process_info_dict = {}
-        all_process_info_dict["watch_pid"] = set()  # 关注的进程pid
-        all_process_info_dict["process_info"] = {}  # 关注进程的相关信息
-        all_process_info_dict["prev_cpu_total_time"] = 0  # 上次记录的总CPU时间片
+        self.process_monitor_dict = {}
+        self.process_monitor_dict["watch_pid"] = set()  # 关注的进程pid
+        self.process_monitor_dict["process"] = {}  # 关注进程的相关信息
         # nethogs相关
-        all_process_info_dict["libnethogs_thread"] = None  # nethogs进程流量监控线程
-        all_process_info_dict["libnethogs_thread_install"] = False  # libnethogs是否安装成功
-        all_process_info_dict["libnethogs"] = None  # nethogs动态链接库对象
-        all_process_info_dict["libnethogs_data"] = {}  # nethogs监测进程流量数据
+        self.process_monitor_dict["libnethogs_thread"] = None  # nethogs进程流量监测线程
+        self.process_monitor_dict["libnethogs_thread_install"] = False  # libnethogs是否安装成功
+        self.process_monitor_dict["libnethogs"] = None  # nethogs动态链接库对象
+        self.process_monitor_dict["libnethogs_data"] = {}  # nethogs监测进程流量数据
 
         # 标准进程相关信息数据结构
-        process_info_dict = {}
-        process_info_dict["pre_time"] = 0  # 时间片(用于计算各种占用率 - 注意,这里是整个进程公用的)
-        process_info_dict["prev_cpu_time"] = None
-        process_info_dict["prev_io"] = None
 
         # 系统内核数据
         self.MEM_PAGE_SIZE = 4  # KB
@@ -86,6 +90,36 @@ class ProcMontor(object):
         LIBRARY_NAME = "libnethogs.so"
         # PCAP格式过滤器 eg: "port 80 or port 8080 or port 443"
         FILTER = None
+
+    def init_process_info_data(self):
+        """初始化进程信息"""
+        process_info_dict = \
+            {
+                "prev_total_cpu_time": None,  # 上次记录的CPU时间片
+                "prev_process_cpu_time": None,  # 上次记录进程CPU时间片
+                "prev_io_read_time": -1,  # 上次读取IO数据的时间
+                "prev_io": None  # 上次读取的IO数据
+            }
+        return deepcopy(process_info_dict)
+
+    def get_all_watched_pid(self):
+        """获取所有监测的进程号"""
+        return self.process_monitor_dict["watch_pid"]
+
+    def watch_process(self, pid):
+        """监测进程"""
+        self.process_monitor_dict["watch_pid"].add(int(pid))
+        if not str(pid) in self.process_monitor_dict["process"]:  # use [in] rather than [dict.has_key()]
+            self.process_monitor_dict["process"][str(pid)] = self.init_process_info_data()
+
+    def is_process_watched(self, pid):
+        """判断该进程是否被监测"""
+        return int(pid) in self.process_monitor_dict["watch_pid"]
+
+    def remove_watched_process(self, pid):
+        """移除被监测的进程"""
+        if str(pid) in self.process_monitor_dict["process"]:
+            self.process_monitor_dict["process"].pop(str(pid))
 
     @wrap_process_exceptions
     def get_all_pid(self):
@@ -131,28 +165,27 @@ class ProcMontor(object):
 
         return sum(map(int, p_data.split(" ")[13:17]))  # 进程cpu时间片 = utime+stime+cutime+cstime
 
-    # def calc_process_cpu_percent(pid, interval=CALC_FUNC_INTERVAL):
-    #     """计算进程CPU使用率 (计算的cpu总体占用率)"""
-    #     global all_process_info_dict, process_info_dict
-    #     # 初始化 - 添加进程信息
-    #     if int(pid) not in all_process_info_dict["watch_pid"]:
-    #         all_process_info_dict["watch_pid"].add(int(pid))
-    #         all_process_info_dict["process_info"][str(pid)] = deepcopy(process_info_dict)  # 添加一个全新的进程数据结构副本
-    #
-    #     if all_process_info_dict["process_info"][str(pid)]["prev_cpu_time"] is None:
-    #         all_process_info_dict["prev_cpu_total_time"] = get_total_cpu_time()[0]
-    #         all_process_info_dict["process_info"][str(pid)]["prev_cpu_time"] = get_process_cpu_time(pid)
-    #         sleep(interval)
-    #
-    #     current_cpu_total_time = get_total_cpu_time()[0]
-    #     current_process_cpu_time = get_process_cpu_time(pid)
-    #     process_cpu_percent = (current_process_cpu_time - all_process_info_dict["process_info"][str(pid)]["prev_cpu_time"]) \
-    #                           * 100.0 / (current_cpu_total_time - all_process_info_dict["prev_cpu_total_time"])
-    #
-    #     all_process_info_dict["process_info"][str(pid)]["prev_cpu_time"] = current_process_cpu_time
-    #     all_process_info_dict["prev_cpu_total_time"] = current_cpu_total_time
-    #
-    #     return process_cpu_percent
+    def calc_process_cpu_percent(self, pid):
+        """计算进程CPU使用率 (计算的cpu总体占用率)"""
+        # 初始化 - 添加进程信息
+        if pid in self.process_monitor_dict["process"]:  # 进程数据必须先被初始化
+            process_info = self.process_monitor_dict["process"][str(pid)]
+            if not process_info["prev_total_cpu_time"]:  # 第一次计算
+                process_info["prev_total_cpu_time"] = self.SysMonitor.get_total_cpu_time()[0]
+                process_info["prev_process_cpu_time"] = self.get_process_cpu_time(int(pid))
+                return 0
+            else:  # 非第一次计算
+                current_cpu_total_time = self.SysMonitor.get_total_cpu_time()[0]
+                current_process_cpu_time = self.get_process_cpu_time(int(pid))
+                process_cpu_percent = round(
+                    (current_process_cpu_time - process_info["prev_process_cpu_time"]) * 100.0 \
+                    / (current_cpu_total_time - process_info["prev_total_cpu_time"])
+                    , 2)
+                process_info["prev_total_cpu_time"] = current_cpu_total_time
+                process_info["prev_process_cpu_time"] = current_process_cpu_time
+                return process_cpu_percent
+        else:
+            return -1
 
     @wrap_process_exceptions
     def get_path_total_size(self, path, style="M"):
@@ -212,14 +245,50 @@ class ProcMontor(object):
 
         return map(int, [rchar, wchar])
 
-    # 基于nethogs的进程网络流量监控实现
+    def calc_process_cpu_io(self, pid, style="M"):
+        """计算进程的磁盘IO速度 (默认单位MB/s)"""
+        if style == "M":  # MB/s
+            io_speed_units = 1000. ** 2
+        elif style == "G":  # GB/s
+            io_speed_units = 1000. ** 3
+        elif style == "K":  # KB/s
+            io_speed_units = 1000. ** 1
+        else:  # 未指定IO速度单位
+            return [-1, -1]
+
+        if pid in self.process_monitor_dict["process"]:  # 进程数据必须先被初始化
+            process_info = self.process_monitor_dict["process"][str(pid)]
+            if not process_info["prev_io"]:  # 第一次计算
+                process_info["prev_io"] = self.get_process_io(int(pid))
+                process_info["prev_io_read_time"] = time()
+                return [0., 0.]
+            else:  # 非第一次计算
+                current_time = time()
+                current_rchar, current_wchar = self.get_process_io(int(pid))
+
+                read_IO_speed = round(
+                    (current_rchar - process_info["prev_io"][0]) / io_speed_units /
+                    (current_time - process_info["prev_io_read_time"])
+                    , 2)
+                write_IO_speed = round(
+                    (current_wchar - process_info["prev_io"][1]) / io_speed_units /
+                    (current_time - process_info["prev_io_read_time"])
+                    , 2)
+
+                process_info["prev_io"] = [current_rchar, current_wchar]
+                process_info["prev_io_read_time"] = current_time
+
+                return [read_IO_speed, write_IO_speed]
+        else:
+            return [-1., -1.]
 
     @wrap_process_exceptions
     def is_libnethogs_install(self, libnethogs_path="/usr/local/lib/libnethogs.so"):
         """检测libnethogs环境是否安装"""
         return os.path.exists(libnethogs_path) and os.path.isfile(libnethogs_path)
 
-
+# todo fin it 2019.2.16
+# 基于nethogs的进程网络流量监测实现
 class Action():
     """数据动作 SET(add,update),REMOVE(removed)"""
     SET = 1
@@ -229,7 +298,7 @@ class Action():
 
 
 class LoopStatus():
-    """监控进程循环状态"""
+    """监测进程循环状态"""
     OK = 0
     FAILURE = 1
     NO_DEVICE = 2
@@ -238,7 +307,7 @@ class LoopStatus():
 
 
 class NethogsMonitorRecord(ctypes.Structure):
-    """nethogs进程流量监控线程 - 用于进程浏览监控的数据结构
+    """nethogs进程流量监测线程 - 用于进程浏览监测的数据结构
     ctypes version of the struct of the same name from libnethogs.h"""
     _fields_ = (("record_id", ctypes.c_int),
                 ("name", ctypes.c_char_p),
@@ -253,7 +322,7 @@ class NethogsMonitorRecord(ctypes.Structure):
 
 
 def signal_handler(signal, frame):
-    """nethogs进程流量监控线程 - 退出信号处理"""
+    """nethogs进程流量监测线程 - 退出信号处理"""
     global all_process_info_dict
     all_process_info_dict["libnethogs"].nethogsmonitor_breakloop()
     all_process_info_dict["libnethogs_thread"] = None
@@ -261,7 +330,7 @@ def signal_handler(signal, frame):
 
 def dev_args(devnames):
     """
-    nethogs进程流量监控线程 - 退出信号处理
+    nethogs进程流量监测线程 - 退出信号处理
     Return the appropriate ctypes arguments for a device name list, to pass
     to libnethogs ``nethogsmonitor_loop_devices``. The return value is a
     2-tuple of devc (``ctypes.c_int``) and devicenames (``ctypes.POINTER``)
@@ -283,7 +352,7 @@ def dev_args(devnames):
 
 
 def run_monitor_loop(lib, devnames):
-    """nethogs进程流量监控线程 - 主循环"""
+    """nethogs进程流量监测线程 - 主循环"""
     global all_process_info_dict
 
     # Create a type for my callback func. The callback func returns void (None), and accepts as
@@ -322,10 +391,10 @@ def run_monitor_loop(lib, devnames):
 
 
 def network_activity_callback(action, data):
-    """nethogs进程流量监控线程 - 回掉函数"""
+    """nethogs进程流量监测线程 - 回掉函数"""
     global all_process_info_dict
     if data.contents.pid in all_process_info_dict["watch_pid"]:
-        # 初始化一个新的进程网络监控数据,并替代原来的
+        # 初始化一个新的进程网络监测数据,并替代原来的
         process_net_data = {}
         process_net_data["pid"] = data.contents.pid
         process_net_data["uid"] = data.contents.uid
@@ -343,14 +412,14 @@ def network_activity_callback(action, data):
 
 
 def init_nethogs_thread():
-    """nethogs进程流量监控线程 - 初始化"""
+    """nethogs进程流量监测线程 - 初始化"""
     global all_process_info_dict
     # 处理退出信号
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     # 调用动态链接库
     all_process_info_dict["libnethogs"] = ctypes.CDLL(LIBRARY_NAME)
-    # 初始化并创建监控线程
+    # 初始化并创建监测线程
     monitor_thread = threading.Thread(
         target=run_monitor_loop, args=(all_process_info_dict["libnethogs"],
                                        [get_default_net_device()],)
