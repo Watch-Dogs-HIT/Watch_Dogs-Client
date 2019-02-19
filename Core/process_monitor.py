@@ -29,7 +29,7 @@ import signal
 import datetime
 import threading
 from copy import deepcopy
-from time import time, sleep, localtime, strftime
+from time import time, sleep
 
 from sys_monitor import SysMontor
 from prcess_exception import wrap_process_exceptions
@@ -56,17 +56,27 @@ class ProcMontor(object):
     取消权限 - sudo setcap cap_sys_ptrace+ep ./python2.7
     """
 
+    _nethogs_install = """
+    有关nethogs的安装方式,请参考:
+    https://github.com/Watch-Dogs-HIT/Watch_Dogs/blob/3ab4cdc46d0e91c3b427960ad7c29a838480c774/Watch_Dogs/Core/process_monitor.py#L631
+    """
+
     def __init__(self):
         """初始化数据结构、权限信息"""
+        self.__monitor_data_init__()
+        self.__process_env_init__()
 
-    def __process_info_init__(self):
+    def __process_env_init__(self):
         """初始化监测环境"""
         # 初始化系统监测
         self.SysMonitor = SysMontor()
         # 获取netlogs环境
         self.net_monitor_ability = self.is_libnethogs_install()
-        # 监测数据结构初始化
-        self.__monitor_data_init__()
+        # 初始化netlogs进程
+        if not self.net_monitor_ability:
+            print "netlogs monitor thread initial failed!"
+        else:
+            self.init_nethogs_thread()
 
     def __monitor_data_init__(self):
         """初始化进程监测数据结构"""
@@ -79,26 +89,23 @@ class ProcMontor(object):
         self.process_monitor_dict["libnethogs_thread_install"] = False  # libnethogs是否安装成功
         self.process_monitor_dict["libnethogs"] = None  # nethogs动态链接库对象
         self.process_monitor_dict["libnethogs_data"] = {}  # nethogs监测进程流量数据
-
-        # 标准进程相关信息数据结构
-
         # 系统内核数据
         self.MEM_PAGE_SIZE = 4  # KB
-
         # Libnethogs 数据
-        # 动态链接库名称
-        LIBRARY_NAME = "libnethogs.so"
-        # PCAP格式过滤器 eg: "port 80 or port 8080 or port 443"
-        FILTER = None
+        self.LIBRARY_NAME = "libnethogs.so"  # 动态链接库名称
+        self.FILTER = None  # PCAP格式过滤器 eg: "port 80 or port 8080 or port 443"
+        self.nethogs_running_status = False  # nethogs进程运行状态
 
     def init_process_info_data(self):
         """初始化进程信息"""
+        # 标准进程相关信息数据结构
         process_info_dict = \
             {
                 "prev_total_cpu_time": None,  # 上次记录的CPU时间片
                 "prev_process_cpu_time": None,  # 上次记录进程CPU时间片
                 "prev_io_read_time": -1,  # 上次读取IO数据的时间
-                "prev_io": None  # 上次读取的IO数据
+                "prev_io": None,  # 上次读取的IO数据
+                "prev_net_data": None,  # 最近一次长期网络数据
             }
         return deepcopy(process_info_dict)
 
@@ -287,7 +294,152 @@ class ProcMontor(object):
         """检测libnethogs环境是否安装"""
         return os.path.exists(libnethogs_path) and os.path.isfile(libnethogs_path)
 
-# todo fin it 2019.2.16
+    def signal_handler(self, signal, frame):
+        """nethogs进程流量监测线程 - 退出信号处理"""
+        self.process_monitor_dict["libnethogs"].nethogsmonitor_breakloop()
+        self.process_monitor_dict["libnethogs_thread"] = None
+
+    def dev_args(self, devnames):
+        """
+        nethogs进程流量监测线程 - 网卡参数
+        Return the appropriate ctypes arguments for a device name list, to pass
+        to libnethogs ``nethogsmonitor_loop_devices``. The return value is a
+        2-tuple of devc (``ctypes.c_int``) and devicenames (``ctypes.POINTER``)
+        to an array of ``ctypes.c_char``).
+
+        :param devnames: list of device names to monitor
+        :type devnames: list
+        :return: 2-tuple of devc, devicenames ctypes arguments
+        :rtype: tuple
+        """
+        devc = len(devnames)
+        devnames_type = ctypes.c_char_p * devc
+        devnames_arg = devnames_type()
+        for idx, val in enumerate(devnames):
+            devnames_arg[idx] = (val + chr(0)).encode("ascii")
+        return ctypes.c_int(devc), ctypes.cast(
+            devnames_arg, ctypes.POINTER(ctypes.c_char_p)
+        )
+
+    def run_monitor_loop(self, lib, devnames):
+        """nethogs进程流量监测线程 - 主循环"""
+        self.nethogs_running_status = True
+        # Create a type for my callback func. The callback func returns void (None), and accepts as
+        # params an int and a pointer to a NethogsMonitorRecord instance.
+        # The params and return type of the callback function are mandated by nethogsmonitor_loop().
+        # See libnethogs.h.
+        CALLBACK_FUNC_TYPE = ctypes.CFUNCTYPE(
+            ctypes.c_void_p, ctypes.c_int, ctypes.POINTER(NethogsMonitorRecord)
+        )
+
+        filter_arg = self.FILTER
+        if filter_arg is not None:
+            filter_arg = ctypes.c_char_p(filter_arg.encode("ascii"))
+
+        if len(devnames) < 1:
+            # monitor all devices
+            rc = lib.nethogsmonitor_loop(
+                CALLBACK_FUNC_TYPE(self.network_activity_callback),
+                filter_arg
+            )
+
+        else:
+            devc, devicenames = self.dev_args(devnames)
+            rc = lib.nethogsmonitor_loop_devices(
+                CALLBACK_FUNC_TYPE(self.network_activity_callback),
+                filter_arg,
+                devc,
+                devicenames,
+                ctypes.c_bool(False)
+            )
+
+        if rc != LoopStatus.OK:
+            print("nethogs monitor loop returned {}".format(LoopStatus.MAP[rc]))
+            self.nethogs_running_status = False
+        else:
+            print("exiting nethogsmonitor loop")
+            self.nethogs_running_status = False
+
+    def network_activity_callback(self, action, data):
+        """nethogs进程流量监测线程 - 回调函数"""
+        if data.contents.pid in self.process_monitor_dict["watch_pid"]:
+            # 初始化一个新的进程网络监测数据, 并替代原来的
+            process_net_data = {}
+            process_net_data["pid"] = data.contents.pid
+            process_net_data["uid"] = data.contents.uid
+            process_net_data["action"] = Action.MAP.get(action, "Unknown")
+            process_net_data["pid_name"] = data.contents.name
+            process_net_data["record_id"] = data.contents.record_id
+            process_net_data["str_time"] = datetime.datetime.now().strftime("%H:%M:%S")  # 这里获取的是本地时间
+            process_net_data["unix_timestamp"] = time()  # unix时间戳, 单位是秒
+            process_net_data["device"] = data.contents.device_name.decode("ascii")
+            process_net_data["sent_bytes"] = data.contents.sent_bytes
+            process_net_data["recv_bytes"] = data.contents.recv_bytes
+            process_net_data["sent_kbs"] = round(data.contents.sent_kbs, 2)
+            process_net_data["recv_kbs"] = round(data.contents.recv_kbs, 2)
+
+            self.process_monitor_dict["libnethogs_data"][str(data.contents.pid)] = process_net_data
+
+    def init_nethogs_thread(self):
+        """nethogs进程流量监测线程 - 初始化"""
+        # 处理退出信号
+        signal.signal(signal.SIGINT, self.signal_handler)
+        signal.signal(signal.SIGTERM, self.signal_handler)
+        # 调用动态链接库
+        self.process_monitor_dict["libnethogs"] = ctypes.CDLL(self.LIBRARY_NAME)
+        # 初始化并创建监测线程
+        monitor_thread = threading.Thread(
+            target=self.run_monitor_loop, args=(self.process_monitor_dict["libnethogs"],
+                                                [self.SysMonitor.get_default_net_device()],)
+        )
+        self.process_monitor_dict["libnethogs_thread"] = monitor_thread
+        monitor_thread.start()
+        monitor_thread.join(0.5)
+
+        return
+
+    def get_process_net_info(self, pid):
+        """获取进程的网络信息(基于nethogs)"""
+        if not self.net_monitor_ability and self.nethogs_running_status:
+            print "Error : libnethogs is not running"
+            return {"error": "libnethogs is not running"}
+
+        if self.is_process_watched(int(pid)):
+            return self.process_monitor_dict["libnethogs_data"].get(str(pid), {})
+        else:
+            return {"error": "No such process {}".format(str(pid))}
+
+    def calc_process_net_speed(self, pid, speed_type="recent", long_term_sec_interval=6000):
+        """
+        计算进程网络上传,下载速度[Kbps, kbps]
+        瞬时网络速度计算/长期(10min)网络速度计算
+        """
+        if self.is_process_watched(pid):
+            process_info = self.process_monitor_dict["process"][str(pid)]
+            if speed_type == "recent":  # 瞬时
+                process_net_data = self.process_monitor_dict["libnethogs_data"].get(str(pid), {})
+                if process_net_data:
+                    process_info["prev_net_data"] = process_net_data
+                    return process_net_data["sent_kbs"], process_net_data["recv_bytes"]
+                else:
+                    return 0., 0.
+            else:  # 长期
+                prev_net_data = process_info["prev_net_data"]
+                if prev_net_data:
+                    now_net_data = self.get_process_net_info(pid)
+                    send_kbps = round((now_net_data["sent_bytes"] - prev_net_data["sent_bytes"]) / 1024. / \
+                                      (now_net_data["unix_timestamp"] - prev_net_data["unix_timestamp"]), 2)
+                    recv_kbps = round((now_net_data["recv_bytes"] - prev_net_data["recv_bytes"]) / 1024. / \
+                                      (now_net_data["unix_timestamp"] - prev_net_data["unix_timestamp"]), 2)
+                    if time() - prev_net_data["unix_timestamp"] > long_term_sec_interval:  # 达到长期速度计算区间
+                        process_info["prev_net_data"] = prev_net_data  # 更新旧记录
+                    return send_kbps, recv_kbps
+                else:
+                    return 0., 0.
+        else:
+            return -1., -1.
+
+
 # 基于nethogs的进程网络流量监测实现
 class Action():
     """数据动作 SET(add,update),REMOVE(removed)"""
@@ -319,130 +471,3 @@ class NethogsMonitorRecord(ctypes.Structure):
                 ("sent_kbs", ctypes.c_float),
                 ("recv_kbs", ctypes.c_float),
                 )
-
-
-def signal_handler(signal, frame):
-    """nethogs进程流量监测线程 - 退出信号处理"""
-    global all_process_info_dict
-    all_process_info_dict["libnethogs"].nethogsmonitor_breakloop()
-    all_process_info_dict["libnethogs_thread"] = None
-
-
-def dev_args(devnames):
-    """
-    nethogs进程流量监测线程 - 退出信号处理
-    Return the appropriate ctypes arguments for a device name list, to pass
-    to libnethogs ``nethogsmonitor_loop_devices``. The return value is a
-    2-tuple of devc (``ctypes.c_int``) and devicenames (``ctypes.POINTER``)
-    to an array of ``ctypes.c_char``).
-
-    :param devnames: list of device names to monitor
-    :type devnames: list
-    :return: 2-tuple of devc, devicenames ctypes arguments
-    :rtype: tuple
-    """
-    devc = len(devnames)
-    devnames_type = ctypes.c_char_p * devc
-    devnames_arg = devnames_type()
-    for idx, val in enumerate(devnames):
-        devnames_arg[idx] = (val + chr(0)).encode("ascii")
-    return ctypes.c_int(devc), ctypes.cast(
-        devnames_arg, ctypes.POINTER(ctypes.c_char_p)
-    )
-
-
-def run_monitor_loop(lib, devnames):
-    """nethogs进程流量监测线程 - 主循环"""
-    global all_process_info_dict
-
-    # Create a type for my callback func. The callback func returns void (None), and accepts as
-    # params an int and a pointer to a NethogsMonitorRecord instance.
-    # The params and return type of the callback function are mandated by nethogsmonitor_loop().
-    # See libnethogs.h.
-    CALLBACK_FUNC_TYPE = ctypes.CFUNCTYPE(
-        ctypes.c_void_p, ctypes.c_int, ctypes.POINTER(NethogsMonitorRecord)
-    )
-
-    filter_arg = FILTER
-    if filter_arg is not None:
-        filter_arg = ctypes.c_char_p(filter_arg.encode("ascii"))
-
-    if len(devnames) < 1:
-        # monitor all devices
-        rc = lib.nethogsmonitor_loop(
-            CALLBACK_FUNC_TYPE(network_activity_callback),
-            filter_arg
-        )
-
-    else:
-        devc, devicenames = dev_args(devnames)
-        rc = lib.nethogsmonitor_loop_devices(
-            CALLBACK_FUNC_TYPE(network_activity_callback),
-            filter_arg,
-            devc,
-            devicenames,
-            ctypes.c_bool(False)
-        )
-
-    if rc != LoopStatus.OK:
-        print("nethogsmonitor loop returned {}".format(LoopStatus.MAP[rc]))
-    else:
-        print("exiting nethogsmonitor loop")
-
-
-def network_activity_callback(action, data):
-    """nethogs进程流量监测线程 - 回掉函数"""
-    global all_process_info_dict
-    if data.contents.pid in all_process_info_dict["watch_pid"]:
-        # 初始化一个新的进程网络监测数据,并替代原来的
-        process_net_data = {}
-        process_net_data["pid"] = data.contents.pid
-        process_net_data["uid"] = data.contents.uid
-        process_net_data["action"] = Action.MAP.get(action, "Unknown")
-        process_net_data["pid_name"] = data.contents.name
-        process_net_data["record_id"] = data.contents.record_id
-        process_net_data["time"] = datetime.datetime.now().strftime("%H:%M:%S")  # 这里获取的是本地时间
-        process_net_data["device"] = data.contents.device_name.decode("ascii")
-        process_net_data["sent_bytes"] = data.contents.sent_bytes
-        process_net_data["recv_bytes"] = data.contents.recv_bytes
-        process_net_data["sent_kbs"] = round(data.contents.sent_kbs, 2)
-        process_net_data["recv_kbs"] = round(data.contents.recv_kbs, 2)
-
-        all_process_info_dict["libnethogs_data"][str(data.contents.pid)] = process_net_data
-
-
-def init_nethogs_thread():
-    """nethogs进程流量监测线程 - 初始化"""
-    global all_process_info_dict
-    # 处理退出信号
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-    # 调用动态链接库
-    all_process_info_dict["libnethogs"] = ctypes.CDLL(LIBRARY_NAME)
-    # 初始化并创建监测线程
-    monitor_thread = threading.Thread(
-        target=run_monitor_loop, args=(all_process_info_dict["libnethogs"],
-                                       [get_default_net_device()],)
-    )
-    all_process_info_dict["libnethogs_thread"] = monitor_thread
-    monitor_thread.start()
-    monitor_thread.join(0.5)
-
-    return
-
-
-def get_process_net_info(pid):
-    """获取进程的网络信息(基于nethogs)"""
-    global all_process_info_dict
-
-    if not all_process_info_dict["libnethogs_thread_install"]:
-        all_process_info_dict["libnethogs_thread_install"] = is_libnethogs_install()
-        if not all_process_info_dict["libnethogs_thread_install"]:
-            print "Error : libnethogs is not installed!"
-            exit(-1)
-
-    all_process_info_dict["watch_pid"].add(int(pid))
-    if not all_process_info_dict["libnethogs_thread"]:
-        init_nethogs_thread()
-
-    return all_process_info_dict["libnethogs_data"].get(str(pid), {})
