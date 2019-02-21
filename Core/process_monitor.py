@@ -199,18 +199,17 @@ class ProcMontor(object):
         """获取文件夹总大小(默认MB)"""
         total_size = 0
         # 通过 os.walk() 获取所有文件并计算总大小
-        for dir_path, dir_names, file_names in os.walk(path):
-            for fn in file_names:
-                try:
-                    total_size += os.path.getsize(os.path.join(dir_path, fn))
-                except (OSError, IOError):
-                    continue
+        for root, dirs, files in os.walk(path):
+            try:
+                total_size += sum([os.path.getsize(os.path.join(root, name)) for name in files])
+            except (OSError, IOError):
+                continue
         # 调整返回单位大小
         if style == "M":
             return round(total_size / 1024. ** 2, 2)
         elif style == "G":
             return round(total_size / 1024. ** 3, 2)
-        else:  # "KB"
+        elif style == "K":  # "KB"
             return round(total_size / 1024., 2)
 
     @wrap_process_exceptions
@@ -261,14 +260,14 @@ class ProcMontor(object):
         elif style == "K":  # KB/s
             io_speed_units = 1000. ** 1
         else:  # 未指定IO速度单位
-            return [-1, -1]
+            return -1, -1
 
         if pid in self.process_monitor_dict["process"]:  # 进程数据必须先被初始化
             process_info = self.process_monitor_dict["process"][str(pid)]
             if not process_info["prev_io"]:  # 第一次计算
                 process_info["prev_io"] = self.get_process_io(int(pid))
                 process_info["prev_io_read_time"] = time()
-                return [0., 0.]
+                return 0., 0.
             else:  # 非第一次计算
                 current_time = time()
                 current_rchar, current_wchar = self.get_process_io(int(pid))
@@ -285,9 +284,9 @@ class ProcMontor(object):
                 process_info["prev_io"] = [current_rchar, current_wchar]
                 process_info["prev_io_read_time"] = current_time
 
-                return [read_IO_speed, write_IO_speed]
+                return read_IO_speed, write_IO_speed
         else:
-            return [-1., -1.]
+            return -1., -1.
 
     @wrap_process_exceptions
     def is_libnethogs_install(self, libnethogs_path="/usr/local/lib/libnethogs.so"):
