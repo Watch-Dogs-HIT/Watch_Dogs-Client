@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # encoding:utf-8
 
+import os
 import unittest
+from time import sleep
 
 from Core.process_monitor import ProcMontor
 from Core.process_manage import ProcManage
@@ -10,33 +12,106 @@ from Core.process_manage import ProcManage
 class TestSysMontor(unittest.TestCase):
     """系统监控功能测试类"""
 
-    def setUp(self):
+    def set(self, test_process='mysql'):
         self.P = ProcMontor()
         self.PM = ProcManage()
+        self.test_process_name = test_process
         self.pid_of_mysql = 0
-        if self.PM.search_pid_by_keyword("mysql")[0]:
-            self.pid_of_mysql = self.PM.search_pid_by_keyword("mysql")[0][0]
+        if self.PM.search_pid_by_keyword(test_process)[0]:
+            self.pid_of_mysql = self.PM.search_pid_by_keyword(test_process)[0][0]
+        self.P.watch_process(self.pid_of_mysql)
+        # init
+        self.assertEqual(self.P.calc_process_cpu_percent(self.pid_of_mysql), 0)
+        self.assertEqual(self.P.calc_process_cpu_io(self.pid_of_mysql), (0., 0.))
 
     def test_process_info(self):
         """进程信息测试"""
         print "进程信息测试",
+        if self.pid_of_mysql:
+            self.assertEqual(self.P.is_process_watched(self.pid_of_mysql), True)
+            test_process_info = self.P.get_process_info(self.pid_of_mysql)
+            self.assertIsInstance(test_process_info, dict)
+            print "进程信息 :"
+            print "进程号 :", test_process_info["pid"]
+            print "启动命令 :", test_process_info["comm"]
+            print "进程状态 :", test_process_info["state"]
+            print "父进程号 :", test_process_info["ppid"]
+            print "组进程号 :", test_process_info["pgrp"]
+            print "线程数目 :", test_process_info["thread num"]
+            print "命令行 :", test_process_info["cmdline"]
+        else:
+            print "未获取到{}进程".format(self.test_process_name)
 
     def test_process_cpu(self):
         """进程CPU占用率测试"""
         print "进程CPU占用率测试",
+        if self.pid_of_mysql:
+            sleep(3)
+            c = self.P.calc_process_cpu_percent(self.pid_of_mysql)
+            self.assertIsInstance(c, float)
+            print c,
+            print "%"
+        else:
+            print "未获取到{}进程".format(self.test_process_name)
 
     def test_process_io(self):
         """进程IO速度测试"""
         print "进程IO速度测试",
+        if self.pid_of_mysql:
+            sleep(3)
+            r, w = self.P.calc_process_cpu_io(self.pid_of_mysql)
+            self.assertIsInstance(r, float)
+            self.assertIsInstance(w, float)
+            print "read :",
+            print r,
+            print "kbps"
+            print "write :",
+            print w,
+            print "kbps"
+        else:
+            print "未获取到{}进程".format(self.test_process_name)
 
     def test_process_mem(self):
         """进程内存占用测试"""
         print "进程内存占用测试",
+        if self.pid_of_mysql:
+            m = self.P.get_process_mem(self.pid_of_mysql)
+            self.assertIsInstance(m, float)
+            print "use memory :",
+            print m,
+            print "MB"
+        else:
+            print "未获取到{}进程".format(self.test_process_name)
 
     def test_process_path(self):
         """进程相关路径大小测试"""
         print "进程相关路径大小测试",
+        test_path = "/home/ubuntu/temp"
+        ts = self.P.get_path_total_size(test_path)
+        a = self.P.get_path_avail_size(test_path)
+        self.assertIsInstance(ts, float)
+        self.assertIsInstance(a, float)
+        print "测试地址", test_path
+        print "总占用大小", ts, "M"
+        print "剩余可用大小", a, "G"
 
     def test_process_net(self):
         """进程网络速度测试"""
         print "进程网络速度测试",
+        if self.pid_of_mysql:
+            sleep(5)
+            self.assertIsInstance(self.P.get_process_net_info(self.pid_of_mysql), dict)
+            u, d = self.P.calc_process_net_speed(self.pid_of_mysql)
+            self.assertIsInstance(u, float)
+            self.assertIsInstance(d, float)
+            print "上传速度", u, "KB/s"
+            print "下载速度", d, "KB/s"
+
+        else:
+            print "未获取到{}进程".format(self.test_process_name)
+
+    def teardown_class(self):
+        print "clear..."
+        os.kill(os.getpid(), 9)
+
+# todo : 仍有一些问题(跟单元测试有关)

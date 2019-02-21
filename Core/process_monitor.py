@@ -197,6 +197,7 @@ class ProcMontor(object):
     @wrap_process_exceptions
     def get_path_total_size(self, path, style="M"):
         """获取文件夹总大小(默认MB)"""
+        # todo : 与du -s 命令获取的结果有出入!?
         total_size = 0
         # 通过 os.walk() 获取所有文件并计算总大小
         for root, dirs, files in os.walk(path):
@@ -419,7 +420,7 @@ class ProcMontor(object):
                 process_net_data = self.process_monitor_dict["libnethogs_data"].get(str(pid), {})
                 if process_net_data:
                     process_info["prev_net_data"] = process_net_data
-                    return process_net_data["sent_kbs"], process_net_data["recv_bytes"]
+                    return process_net_data["sent_kbs"], process_net_data["recv_kbs"]
                 else:
                     return 0., 0.
             else:  # 长期
