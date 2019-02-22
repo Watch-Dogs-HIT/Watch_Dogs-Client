@@ -37,7 +37,7 @@ from prcess_exception import wrap_process_exceptions
 CALC_FUNC_INTERVAL = 2
 
 
-class ProcMontor(object):
+class ProcMonitor(object):
     """进程检测类"""
 
     _instance = None

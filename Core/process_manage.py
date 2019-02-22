@@ -32,7 +32,7 @@ from time import localtime, strftime
 from prcess_exception import wrap_process_exceptions, NoSuchProcess, ZombieProcess, AccessDenied
 
 
-class ProcManage(object):
+class ProcManager(object):
     """进程管理类"""
 
     _instance = None

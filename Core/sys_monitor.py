@@ -34,7 +34,7 @@ from prcess_exception import wrap_process_exceptions
 CALC_FUNC_INTERVAL = 2  # 通用调用函数间隔(秒)
 
 
-class SysMontor(object):
+class SysMonitor(object):
     """系统监视模块"""
 
     _instance = None
