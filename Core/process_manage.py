@@ -41,7 +41,7 @@ class ProcManager(object):
         """单例模式"""
 
         if not cls._instance:
-            cls._instance = super(ProcManage, cls).__new__(cls, *args, **kw)
+            cls._instance = super(ProcManager, cls).__new__(cls, *args, **kw)
         return cls._instance
 
     def __init__(self):

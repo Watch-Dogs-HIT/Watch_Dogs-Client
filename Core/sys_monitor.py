@@ -43,7 +43,7 @@ class SysMonitor(object):
         """单例模式"""
 
         if not cls._instance:
-            cls._instance = super(SysMontor, cls).__new__(cls, *args, **kw)
+            cls._instance = super(SysMonitor, cls).__new__(cls, *args, **kw)
         return cls._instance
 
     def __init__(self):

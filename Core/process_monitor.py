@@ -31,7 +31,7 @@ import threading
 from copy import deepcopy
 from time import time, sleep
 
-from sys_monitor import SysMontor
+from sys_monitor import SysMonitor
 from prcess_exception import wrap_process_exceptions
 
 CALC_FUNC_INTERVAL = 2
@@ -46,7 +46,7 @@ class ProcMonitor(object):
         """单例模式"""
 
         if not cls._instance:
-            cls._instance = super(ProcMontor, cls).__new__(cls, *args, **kw)
+            cls._instance = super(ProcMonitor, cls).__new__(cls, *args, **kw)
         return cls._instance
 
     _note = """
@@ -69,7 +69,7 @@ class ProcMonitor(object):
     def __process_env_init__(self):
         """初始化监测环境"""
         # 初始化系统监测
-        self.SysMonitor = SysMontor()
+        self.SysMonitor = SysMonitor()
         # 获取netlogs环境
         self.net_monitor_ability = self.is_libnethogs_install()
         # 初始化netlogs进程
