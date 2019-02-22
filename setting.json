@@ -1,0 +1,8 @@
+{
+  "comment": "Watch_Dogs-Client 配置文件",
+  "author": "h-j-13",
+  "last-update time": "2019-02-22",
+  "allowed_request_addr": [
+    "0.0.0.0"
+  ]
+}
