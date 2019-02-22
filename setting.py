@@ -43,6 +43,7 @@ class Setting(object):
         self.log_init()
         self.static_value_refresh()
 
+    PORT = 80
     ALLOWED_REQUEST_ADDR_LIST = []
 
     # @staticmethod
@@ -51,8 +52,9 @@ class Setting(object):
         jsonFile = file(self.setting_json_path)
         setting = json.load(jsonFile)
         jsonFile.close()
-        # 流程
+        # 读取参数
         Setting.ALLOWED_REQUEST_ADDR_LIST = map(lambda u: u.encode("utf-8"), setting["allowed_request_addr"])
+        Setting.PORT = setting["port"]
         if not Setting.ALLOWED_REQUEST_ADDR_LIST:  # 若不填则默认允许所有地址发出请求
             Setting.ALLOWED_REQUEST_ADDR_LIST = ["0.0.0.0"]
         return setting
@@ -63,7 +65,6 @@ class Setting(object):
         if not self.log_init_done:
             self.log_init_done = True
             logging.config.fileConfig(self.log_conf_path)
-            print self.log_conf_path
             self.logger = logging.getLogger("main")
         return self.logger
 
