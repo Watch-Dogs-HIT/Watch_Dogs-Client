@@ -3,14 +3,14 @@
 
 import unittest
 
-from Core.sys_monitor import SysMontor
+from Core.sys_monitor import SysMonitor
 
 
 class TestSysMontor(unittest.TestCase):
     """系统监控功能测试类"""
 
     def setUp(self):
-        self.S = SysMontor()
+        self.S = SysMonitor()
 
     def test_sys_info(self):
         """测试系统监控"""

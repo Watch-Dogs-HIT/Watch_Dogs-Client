@@ -64,12 +64,12 @@ class SysMonitor(object):
                 map(int, total_cpu_time.split(' '))
             return user + nice + system + idle + iowait + irq + softirq + steal, user + nice + system
 
-    def calc_cpu_percent(self, interval=CALC_FUNC_INTERVAL):
+    def calc_cpu_percent(self):
         """计算CPU总占用率 (返回的是百分比)"""
         # 两次调用之间的间隔最好不要小于2s,否则可能会为0
         if self.prev_cpu_work_time == 0:  # 未初始化
             self.prev_cpu_total_time, self.prev_cpu_work_time = self.get_total_cpu_time()
-            sleep(interval)
+            return 0.
         current_total_time, current_work_time = self.get_total_cpu_time()
         cpu_percent = round((current_work_time - self.prev_cpu_work_time) * 100.0 \
                             / (current_total_time - self.prev_cpu_total_time), 2)
@@ -93,20 +93,21 @@ class SysMonitor(object):
 
         return cpu_total_times
 
-    def calc_cpu_percent_by_cores(self, interval=CALC_FUNC_INTERVAL):
+    def calc_cpu_percent_by_cores(self):
         """计算CPU各核占用率 (返回的是百分比)"""
-
         cpu_percent_by_cores = {}
+
         if not self.prev_cpu_time_by_cores:  # 未初始化
             self.prev_cpu_time_by_cores = self.get_cpu_total_time_by_cores()
-            sleep(interval)
-        current_cpu_time_by_cores = self.get_cpu_total_time_by_cores()
-
-        for cpu_name in current_cpu_time_by_cores.keys():
-            cpu_percent_by_cores[cpu_name] = round(
-                (current_cpu_time_by_cores[cpu_name][1] - self.prev_cpu_time_by_cores[cpu_name][1]) * 100.0 / \
-                (current_cpu_time_by_cores[cpu_name][0] - self.prev_cpu_time_by_cores[cpu_name][0]), 2)
-        self.prev_cpu_time_by_cores = current_cpu_time_by_cores
+            for cpu_name in self.prev_cpu_time_by_cores.keys():
+                cpu_percent_by_cores[cpu_name] = 0.
+        else:
+            current_cpu_time_by_cores = self.get_cpu_total_time_by_cores()
+            for cpu_name in current_cpu_time_by_cores.keys():
+                cpu_percent_by_cores[cpu_name] = round(
+                    (current_cpu_time_by_cores[cpu_name][1] - self.prev_cpu_time_by_cores[cpu_name][1]) * 100.0 / \
+                    (current_cpu_time_by_cores[cpu_name][0] - self.prev_cpu_time_by_cores[cpu_name][0]), 2)
+            self.prev_cpu_time_by_cores = current_cpu_time_by_cores
 
         return cpu_percent_by_cores
 
@@ -151,7 +152,7 @@ class SysMonitor(object):
     def get_default_net_device(self):
         """获取默认网卡 - 默认选取流量最大的网卡作为默认监控网卡(本地回环除外)"""
         devices = self.get_all_net_device()
-        default_net_device = 'eth0'
+        default_net_device = "eth0"
 
         if default_net_device in devices:
             return default_net_device
@@ -168,13 +169,11 @@ class SysMonitor(object):
     @wrap_process_exceptions
     def get_net_dev_data(self, device):
         """获取系统网络数据(某一网卡) -  /proc/net/dev"""
-
         receive_bytes = -1
         send_bytes = -1
         with open("/proc/net/dev", "r") as net_dev:
             for line in net_dev:
-                if line.find(device):
-                    print line
+                if line.find(device) != -1:
                     dev_data = map(int, filter(lambda x: x, line.split(":", 2)[1].strip().split(" ")))
                     receive_bytes += dev_data[0]
                     send_bytes += dev_data[8]
@@ -182,17 +181,17 @@ class SysMonitor(object):
         return receive_bytes, send_bytes
 
     @wrap_process_exceptions
-    def calc_net_speed(self, device_name="", interval=CALC_FUNC_INTERVAL):
+    def calc_net_speed(self, device_name=None):
         """
         计算某一网卡的网络速度
         :return: [上传速度,下载速度] (单位为Kbps)
         """
-        if device_name:  # 未指定网卡
+        if not device_name:  # 未指定网卡
             device_name = self.get_default_net_device()
         if self.prev_net_receive_byte == 0:  # 未初始化
             self.prev_net_receive_byte, self.prev_net_send_byte = self.get_net_dev_data(device_name)
             self.prev_net_time = time()
-            sleep(interval)
+            return 0., 0.
         current_net_receive_byte, current_net_send_byte = self.get_net_dev_data(device_name)
         current_net_time = time()
         download_speed = (current_net_receive_byte - self.prev_net_receive_byte) / 1024.0 / (

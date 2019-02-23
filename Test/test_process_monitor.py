@@ -5,16 +5,16 @@ import os
 import unittest
 from time import sleep
 
-from Core.process_monitor import ProcMontor
-from Core.process_manage import ProcManage
+from Core.process_monitor import ProcMonitor
+from Core.process_manage import ProcManager
 
 
 class TestSysMontor(unittest.TestCase):
     """系统监控功能测试类"""
 
     def set(self, test_process='mysql'):
-        self.P = ProcMontor()
-        self.PM = ProcManage()
+        self.P = ProcMonitor()
+        self.PM = ProcManager()
         self.test_process_name = test_process
         self.pid_of_mysql = 0
         if self.PM.search_pid_by_keyword(test_process)[0]:

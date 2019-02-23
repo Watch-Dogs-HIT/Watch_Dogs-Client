@@ -5,14 +5,14 @@ import os
 import unittest
 
 from Core.prcess_exception import AccessDenied, NoSuchProcess
-from Core.process_manage import ProcManage
+from Core.process_manage import ProcManager
 
 
 class TestSysMontor(unittest.TestCase):
     """进程管理功能测试类"""
 
     def setUp(self):
-        self.P = ProcManage()
+        self.P = ProcManager()
 
     def test_process_info(self, test_process_name="mysql"):
         print "\n-----进程检索测试-----"
