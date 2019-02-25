@@ -269,13 +269,20 @@ def log_keyword_lines():
     return jsonify({"ERROR": "NO path & key_word"})
 
 
-# -----process-----
+# -----process all-----
 
 @app.route("/proc/<int:pid>/")
 @request_source_check
 def process_all_info(pid):
     """进程所有信息汇总"""
-    return str(pid)
+    global process_monotor
+    res = process_monotor.get_process_info(pid)
+    res["cpu"] = process_monotor.calc_process_cpu_percent(pid)
+    res["io"] = process_monotor.calc_process_cpu_io(pid)
+    res["mem"] = process_monotor.get_process_mem(pid)
+    if process_monotor.net_monitor_ability:
+        res["net"] = process_monotor.calc_process_net_speed(pid)
+    return jsonify(res)
 
 
 @app.route("/proc/all_pid/")
@@ -292,11 +299,79 @@ def proc_all_pid_name():
     return jsonify(process_manager.get_all_pid_name())
 
 
+# -----watch-----
+
+@app.route("/proc/watch/all")
+@request_source_check
+def proc_watch_all():
+    global process_monotor
+    return jsonify(list(process_monotor.get_all_watched_pid()))
+
+
+@app.route("/proc/watch/is/<int:pid>")
+@request_source_check
+def proc_watch_is_pid(pid):
+    global process_monotor
+    return str(process_monotor.is_process_watched(pid))
+
+
+@app.route("/proc/watch/add/<int:pid>", )
+@request_source_check
+def proc_watch_add_pid(pid):
+    global process_monotor
+    if not process_monotor.is_process_watched(pid):
+        process_monotor.watch_process(pid)
+        # init process data
+        process_monotor.calc_process_cpu_percent(pid)
+        process_monotor.calc_process_cpu_io(pid)
+        if process_monotor.net_monitor_ability:
+            process_monotor.calc_process_net_speed(pid)
+    return str(process_monotor.is_process_watched(pid))
+
+
+@app.route("/proc/watch/remove/<int:pid>")
+@request_source_check
+def proc_watch_remove_pid(pid):
+    global process_monotor
+    process_monotor.remove_watched_process(pid)
+    return str(process_monotor.is_process_watched(pid))
+
+
+# -----process-----
+
 @app.route("/proc/<int:pid>/info")
 @request_source_check
 def proc_pid_info(pid):
-    global process_manager
-    return jsonify(process_manager.get_process_info(pid))
+    global process_monotor
+    return jsonify(process_monotor.get_process_info(pid))
+
+
+@app.route("/proc/<int:pid>/cpu")
+@request_source_check
+def proc_pid_cpu(pid):
+    global process_monotor
+    return jsonify(process_monotor.calc_process_cpu_percent(pid))
+
+
+@app.route("/proc/<int:pid>/io")
+@request_source_check
+def proc_pid_io(pid):
+    global process_monotor
+    return jsonify(process_monotor.calc_process_cpu_io(pid, style="M"))
+
+
+@app.route("/proc/<int:pid>/net")
+@request_source_check
+def proc_pid_net(pid):
+    global process_monotor
+    return jsonify(process_monotor.calc_process_net_speed(pid))
+
+
+@app.route("/proc/<int:pid>/mem")
+@request_source_check
+def proc_pid_mem(pid):
+    global process_monotor
+    return jsonify(process_monotor.get_process_mem(pid))
 
 
 #
