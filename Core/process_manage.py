@@ -268,7 +268,3 @@ class ProcManager(object):
 
         return result
 
-
-if __name__ == '__main__':
-    print os.kill(28103,9)
-    print ProcManage().kill_process(27843)

@@ -60,6 +60,7 @@ def request_source_check(func):
     return wrapper
 
 
+# -----index-----
 @app.route("/")
 @request_source_check
 def index():
@@ -72,6 +73,7 @@ def index():
     return jsonify(res)
 
 
+# -----sys------
 @app.route("/sys/info")
 @request_source_check
 def sys_info():
@@ -172,6 +174,145 @@ def sys_net_percent():
 def sys_disk_stat():
     global system_monitor
     return jsonify(system_monitor.get_disk_stat())
+
+
+# -----manage-----
+@app.route("/proc/search/<string:key_word>")
+@request_source_check
+def proc_search(key_word):
+    global process_manager
+    search_type = "contain"
+    if request.args.has_key("type"):
+        search_type = request.args.get("type")
+    return jsonify(process_manager.search_pid_by_keyword(key_word, search_type))
+
+
+@app.route("/proc/kill/<int:pid>")
+@request_source_check
+def proc_kill(pid):
+    global process_manager
+    kill_child = False
+    kill_process_gourp = False
+    if request.args.has_key("kill_child"):
+        kill_child = request.args.get("kill_child")
+    if request.args.has_key("kill_process_gourp"):
+        kill_process_gourp = request.args.get("kill_process_gourp")
+    if not kill_child and kill_process_gourp:
+        process_manager.kill_process(pid)
+    else:
+        process_manager.kill_all_process(pid, kill_child, kill_process_gourp)
+
+
+@app.route("/proc/start/<string:execute_file_full_path>")
+@request_source_check
+def proc_start(execute_file_full_path):
+    global process_manager
+    pid = process_manager.start_process(execute_file_full_path)
+    return str(pid)
+
+
+# -----log-----
+@app.route("/log/exist")
+@request_source_check
+def log_exist():
+    global process_manager
+    if request.args.has_key("path"):
+        path = request.args.get("path").encode('utf-8')
+        return jsonify(process_manager.is_log_exist(path))
+    return jsonify({"ERROR": "NO PATH"})
+
+
+@app.route("/log/head")
+@request_source_check
+def log_head():
+    global process_manager
+    if request.args.has_key("path"):
+        path = request.args.get("path").encode('utf-8')
+        n = 100
+        if request.args.has_key("n"):
+            n = int(request.args.get("n").encode('utf-8'))
+        return jsonify(process_manager.get_log_head(path, n))
+    return jsonify({"ERROR": "NO PATH"})
+
+
+@app.route("/log/tail")
+@request_source_check
+def log_tail():
+    global process_manager
+    if request.args.has_key("path"):
+        path = request.args.get("path").encode('utf-8')
+        n = 100
+        if request.args.has_key("n"):
+            n = int(request.args.get("n").encode('utf-8'))
+        return jsonify(process_manager.get_log_tail(path, n))
+    return jsonify({"ERROR": "NO PATH"})
+
+
+@app.route("/log/last_update_time")
+@request_source_check
+def log_last_update_time():
+    global process_manager
+    if request.args.has_key("path"):
+        path = request.args.get("path").encode('utf-8')
+        return str(process_manager.get_log_last_update_time(path))
+    return jsonify({"ERROR": "NO PATH"})
+
+
+@app.route("/log/keyword_lines")
+@request_source_check
+def log_keyword_lines():
+    global process_manager
+    if request.args.has_key("path") and request.args.has_key("key_word"):
+        path = request.args.get("path").encode('utf-8')
+        kw = request.args.get("key_word").encode('utf-8')
+        return jsonify(process_manager.get_log_keyword_lines(path, kw))
+    return jsonify({"ERROR": "NO path & key_word"})
+
+
+# -----process-----
+
+@app.route("/proc/<int:pid>/")
+@request_source_check
+def process_all_info(pid):
+    """进程所有信息汇总"""
+    return str(pid)
+
+
+@app.route("/proc/all_pid/")
+@request_source_check
+def proc_all_pid():
+    global process_manager
+    return jsonify(process_manager.get_all_pid())
+
+
+@app.route("/proc/all_pid_name/")
+@request_source_check
+def proc_all_pid_name():
+    global process_manager
+    return jsonify(process_manager.get_all_pid_name())
+
+
+@app.route("/proc/<int:pid>/info")
+@request_source_check
+def proc_pid_info(pid):
+    global process_manager
+    return jsonify(process_manager.get_process_info(pid))
+
+
+#
+#
+# @app.route("/sys/disk/stat")
+# @request_source_check
+# def sys_disk_stat():
+#     global system_monitor
+#     return jsonify(system_monitor.get_disk_stat())
+#
+#
+# @app.route("/sys/disk/stat")
+# @request_source_check
+# def sys_disk_stat():
+#     global system_monitor
+#     return jsonify(system_monitor.get_disk_stat())
 
 
 if __name__ == "__main__":
