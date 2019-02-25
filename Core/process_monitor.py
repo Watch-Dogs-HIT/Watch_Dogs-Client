@@ -176,7 +176,7 @@ class ProcMonitor(object):
     def calc_process_cpu_percent(self, pid):
         """计算进程CPU使用率 (计算的cpu总体占用率)"""
         # 初始化 - 添加进程信息
-        if pid in self.process_monitor_dict["process"]:  # 进程数据必须先被初始化
+        if str(pid) in self.process_monitor_dict["process"]:  # 进程数据必须先被初始化
             process_info = self.process_monitor_dict["process"][str(pid)]
             if not process_info["prev_total_cpu_time"]:  # 第一次计算
                 process_info["prev_total_cpu_time"] = self.SysMonitor.get_total_cpu_time()[0]
@@ -264,7 +264,7 @@ class ProcMonitor(object):
         else:  # 未指定IO速度单位
             return -1, -1
 
-        if pid in self.process_monitor_dict["process"]:  # 进程数据必须先被初始化
+        if str(pid) in self.process_monitor_dict["process"]:  # 进程数据必须先被初始化
             process_info = self.process_monitor_dict["process"][str(pid)]
             if not process_info["prev_io"]:  # 第一次计算
                 process_info["prev_io"] = self.get_process_io(int(pid))
