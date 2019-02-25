@@ -50,10 +50,12 @@ def request_source_check(func):
     def wrapper(*args, **kw):
         # 验证请求地址
         if request.remote_addr not in ALLOWED_REQUEST_ADDR and "0.0.0.0" not in ALLOWED_REQUEST_ADDR:
+            logger.error("Unknown request addr - " + str(request.remote_addr))
             return jsonify({"Error": "Unknown request addr - " + str(request.remote_addr)}), 403
         try:
             res = func(*args, **kw)
         except Exception as e:
+            logger.error("Error" + str(e))
             return jsonify({"Error": str(e)}), 500
         return res
 
@@ -374,20 +376,33 @@ def proc_pid_mem(pid):
     return jsonify(process_monotor.get_process_mem(pid))
 
 
-#
-#
-# @app.route("/sys/disk/stat")
-# @request_source_check
-# def sys_disk_stat():
-#     global system_monitor
-#     return jsonify(system_monitor.get_disk_stat())
-#
-#
-# @app.route("/sys/disk/stat")
-# @request_source_check
-# def sys_disk_stat():
-#     global system_monitor
-#     return jsonify(system_monitor.get_disk_stat())
+@app.route("/path/size/total")
+@request_source_check
+def path_size_total():
+    global process_monotor
+    if request.args.has_key("path"):
+        path = request.args.get("path").encode('utf-8')
+        return str(process_monotor.get_path_total_size(path))
+    else:
+        return jsonify({"ERROR": "NO path"})
+
+
+@app.route("/path/size/avail")
+@request_source_check
+def path_size_avail():
+    global process_monotor
+    if request.args.has_key("path"):
+        path = request.args.get("path").encode('utf-8')
+        return jsonify(process_monotor.get_path_avail_size(path))
+    else:
+        return jsonify({"ERROR": "NO path"})
+
+
+# -----404-----
+@app.errorhandler(404)
+def api_no_found(e):
+    return jsonify({"ERROR": str(request.url) +
+                             " no found! please click https://github.com/Watch-Dogs-HIT/Watch_Dogs-Client"}), 404
 
 
 if __name__ == "__main__":
