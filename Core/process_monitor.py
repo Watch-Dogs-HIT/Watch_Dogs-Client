@@ -125,7 +125,8 @@ class ProcMonitor(object):
 
     def remove_watched_process(self, pid):
         """移除被监测的进程"""
-        if str(pid) in self.process_monitor_dict["process"]:
+        if str(pid) in self.process_monitor_dict["process"] and int(pid) in self.process_monitor_dict["watch_pid"]:
+            self.process_monitor_dict["watch_pid"].remove(int(pid))
             self.process_monitor_dict["process"].pop(str(pid))
 
     @wrap_process_exceptions
