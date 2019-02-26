@@ -25,7 +25,7 @@ Watch_Dogs - Client
 - 获取进程磁盘占用(需要root权限)
 - 获取进程网络监测(基于[libnethogs](https://github.com/raboof/nethogs),需要读写net文件权限)
 
-####进程管理
+#### 进程管理
 - 获取所有进程名
 - 按进程名称搜索进程
 - 关闭进程
@@ -86,8 +86,8 @@ Watch_Dogs - Client
 | /proc/all_pid_name/    |  无   |  正在运行的所有进程号,进程名    | 200    |
 | /proc/watch/all    |   无  | 正在监控的所有进程号     |   200   |
 | /proc/watch/is/\<int:pid\>    |  无   | 是否在监控此进程(true,false)     |  200    |
-| /proc/watch/add/\<int:pid\>    |   无  | 无     | 200     |
-| /proc/watch/remove/<\int:pid\>    |  无   | 无     | 200     |
+| /proc/watch/add/\<int:pid\>    |   无  | 是否在监控此进程(true,false)     | 200     |
+| /proc/watch/remove/\<int:pid\>    |  无   | 是否在监控此进程(true,false)     | 200     |
 | /proc/\<int:pid\>/info    | 无    | 进程信息     | 200     |
 | /proc/\<int:pid\>/cpu    | 无    | 进程CPU占用率(百分比)     | 200     |
 | /proc/\<int:pid\>/io    |  无   | 进程IO占用\[读取,写入\]\(MB/s\)     | 200     |
