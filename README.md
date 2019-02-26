@@ -2,6 +2,7 @@ Watch_Dogs - Client
 ===================
 基于Linux远程主机及进程状态监测系统 - 远程监控客户端
 
+<<<<<<< HEAD
 ### 核心功能
 基于Linux proc文件系统实现了远程主机及进程状态检测与管理
 #### 主机数据监测
@@ -59,6 +60,14 @@ Watch_Dogs - Client
 |地址|请求参数|返回内容|HTTP code|        
 |:--|:--|:--|:--|      
 | /    | 无| 系统用户名称,本地时间,nethogs环境     |200|     
+=======
+todo : 完成api列表说明文档
+
+以下均为 HTTP `GET` 方法访问
+|地址|请求参数|返回内容|HTTP code|
+|:--|:--|:--|:--:|
+| /    | 无| 系统用户名称,本地时间,nethogs环境     |200|
+>>>>>>> 89f00a5e43c4498113882bc3f301093a24184a21
 | /sys/info    | 无|系统版本,内核版本      |200|
 | /sys/loadavg    | 无|系统平均负载      |200|
 | /sys/uptime     | 无|系统运行时间      |200|
@@ -97,6 +106,7 @@ Watch_Dogs - Client
 | /path/size/avail    | path(文件夹地址)    | 此路径剩余可用大小(G)     |200      |
 | NOT FOUND    | 无    | 页面不存在     | 404     |
 | Untrusted Address    | 无    | 未认证的请求来源地址      | 403     |
+<<<<<<< HEAD
 
 ### 感谢
 监控思路  - []()  
@@ -105,3 +115,5 @@ Watch_Dogs - Client
 ### License
 WTFPL License
 
+=======
+>>>>>>> 89f00a5e43c4498113882bc3f301093a24184a21
