@@ -11,6 +11,10 @@ Watch_Dogs
 
 import getpass
 import functools
+from tornado.ioloop import IOLoop
+from tornado.wsgi import WSGIContainer
+from tornado.httpserver import HTTPServer
+
 from flask import Flask, request, jsonify
 
 from setting import Setting
@@ -401,14 +405,20 @@ def path_size_avail():
 # -----404-----
 @app.errorhandler(404)
 def api_no_found(e):
-    return jsonify({"ERROR": str(request.url) +
-                             " no found! please click https://github.com/Watch-Dogs-HIT/Watch_Dogs-Client"}), 404
+    return jsonify(
+        {"ERROR": str(request.url) + " no found! please click https://github.com/Watch-Dogs-HIT/Watch_Dogs-Client"}
+    ), 404
 
 
 if __name__ == "__main__":
-    app.run(
-        host="0.0.0.0",
-        port=setting.PORT,
-        debug=True,
-        threaded=True
-    )
+    # tornado
+    http_server = HTTPServer(WSGIContainer(app))
+    http_server.listen(setting.PORT)
+    IOLoop.instance().start()
+    # flask demo
+    # app.run(
+    #     host="0.0.0.0",
+    #     port=setting.PORT,
+    #     debug=True,
+    #     threaded=True
+    # )
