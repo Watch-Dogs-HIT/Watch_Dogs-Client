@@ -37,8 +37,8 @@ class Setting(object):
         self.log_conf_path = os.path.join(now_path, LOGGER_CONF_NAME)
         self.setting_json_path = os.path.join(now_path, SETTING_JOSN_NAME)
         if not os.path.exists(self.log_conf_path) or not os.path.exists(self.setting_json_path):
-            print "配置文件读取异常 : 请检查", os.path.basename(sys.argv[0]).split(".")[
-                0], ".py路径下是否有", LOGGER_CONF_NAME, SETTING_JOSN_NAME
+            print "配置文件读取异常 : 请检查", os.path.basename(sys.argv[0]).split(".")[0], \
+                ".py路径下是否有", LOGGER_CONF_NAME, SETTING_JOSN_NAME
             exit(-1)
         self.log_init()
         self.static_value_refresh()
