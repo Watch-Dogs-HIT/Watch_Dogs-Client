@@ -71,8 +71,9 @@ Watch_Dogs - Client
 | /sys/net/devices    | 无|网卡设备列表      |200|
 | /sys/net/default_device    | 无|默认网卡      |200|
 | /sys/net/ip    | 无 | 内网,外网IP     |200|
-| /sys/net/percent    | 无 | 上传速度,下载速度(Kbps)     |200|
-| /sys/disk/stat     | 无 |系统各个挂载点数据      |200|
+| /sys/net/    | 无 | 上传速度,下载速度(Kbps)     |200|
+| /sys/io    | 无 |读取速度,写入速度(MB/s)      |200|        
+| /sys/disk/stat     | 无 |系统各个挂载点数据      |200|  
 | /proc/search/\<string:key_word\>    |[可选]type(查询类型):contain(包含),match(完全匹配)     |查询到的进程号,名称构成的列表      |200      |
 | /proc/kill/\<int:pid\>    |无     | 无     |200|
 | /proc/start/\<string:execute_file_full_path\>   |无     | 启动之后的进程号     |200 |
