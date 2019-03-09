@@ -24,6 +24,7 @@ code & doc  :   https://github.com/Watch-Dogs-HIT/Watch_Dogs/blob/master/Watch_D
 """
 
 import os
+import sys
 import ctypes
 import signal
 import datetime
@@ -195,6 +196,56 @@ class ProcMonitor(object):
         else:
             return -1
 
+    # reference:https://github.com/giampaolo/psutil/blob/ffe8a9d280c397e8fd46eb1422c2838179cfb5d9/psutil/_psposix.py#L123
+    def get_path_disk_usage(self, path):
+        """计算路径磁盘占用"""
+        """Return disk usage associated with path.
+        Note: UNIX usually reserves 5% disk space which is not accessible
+        by user. In this function "total" and "used" values reflect the
+        total and used disk space whereas "free" and "percent" represent
+        the "free" and "used percent" user disk space.
+        """
+        # os.statvfs() does not support unicode on Python 2:
+        # - https://github.com/giampaolo/psutil/issues/416
+        # - http://bugs.python.org/issue18695
+        try:
+            st = os.statvfs(path)
+        except UnicodeEncodeError:
+            if isinstance(path, unicode):
+                try:
+                    path = path.encode(sys.getfilesystemencoding())
+                except UnicodeEncodeError:
+                    pass
+                st = os.statvfs(path)
+            else:
+                raise
+
+        # Total space which is only available to root (unless changed
+        # at system level).
+        total = (st.f_blocks * st.f_frsize)
+        # Remaining free space usable by root.
+        avail_to_root = (st.f_bfree * st.f_frsize)
+        # Remaining free space usable by user.
+        avail_to_user = (st.f_bavail * st.f_frsize)
+        # Total space being used in general.
+        used = (total - avail_to_root)
+        # Total space which is available to user (same as 'total' but
+        # for the user).
+        total_user = used + avail_to_user
+        # User usage percent compared to the total amount of space
+        # the user can use. This number would be higher if compared
+        # to root's because the user has less space (usually -5%).
+        usage_percent_user = round(used * 100. / total_user, 2)
+
+        # NB: the percentage is -5% than what shown by df due to
+        # reserved blocks that we are currently not considering:
+        # https://github.com/giampaolo/psutil/issues/829#issuecomment-223750462
+        return {"path": path,
+                "total_M": round(total / (1024. ** 2), 2),
+                "used_M": round(used / (1024. ** 2), 2),
+                "free_M": round(avail_to_user / (1024. ** 2), 2),
+                "use percent": usage_percent_user}
+
     @wrap_process_exceptions
     def get_path_total_size(self, path, style="M"):
         """获取文件夹总大小(默认MB)"""
@@ -253,7 +304,7 @@ class ProcMonitor(object):
 
         return map(int, [rchar, wchar])
 
-    def calc_process_cpu_io(self, pid, style="M"):
+    def calc_process_io_speed(self, pid, style="M"):
         """计算进程的磁盘IO速度 (默认单位MB/s)"""
         if style == "M":  # MB/s
             io_speed_units = 1000. ** 2
@@ -472,3 +523,14 @@ class NethogsMonitorRecord(ctypes.Structure):
                 ("sent_kbs", ctypes.c_float),
                 ("recv_kbs", ctypes.c_float),
                 )
+
+
+if __name__ == '__main__':
+    p = ProcMonitor()
+    print p.get_path_total_size("/home/ubuntu/Watch_Dogs/")
+    print p.get_path_disk_usage("/home/ubuntu/Watch_Dogs/")
+    import psutil
+
+    print psutil.disk_usage("/home/ubuntu/Watch_Dogs/")
+    print psutil.disk_usage("/")
+    exit(-13)
