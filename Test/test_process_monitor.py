@@ -22,7 +22,7 @@ class TestSysMontor(unittest.TestCase):
         self.P.watch_process(self.pid_of_mysql)
         # init
         self.assertEqual(self.P.calc_process_cpu_percent(self.pid_of_mysql), 0)
-        self.assertEqual(self.P.calc_process_cpu_io(self.pid_of_mysql), (0., 0.))
+        self.assertEqual(self.P.calc_process_io_speed(self.pid_of_mysql), (0., 0.))
 
     def test_process_info(self):
         """进程信息测试"""
@@ -59,7 +59,7 @@ class TestSysMontor(unittest.TestCase):
         print "进程IO速度测试",
         if self.pid_of_mysql:
             sleep(3)
-            r, w = self.P.calc_process_cpu_io(self.pid_of_mysql)
+            r, w = self.P.calc_process_io_speed(self.pid_of_mysql)
             self.assertIsInstance(r, float)
             self.assertIsInstance(w, float)
             print "read :",

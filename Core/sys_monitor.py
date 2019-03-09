@@ -32,6 +32,7 @@ from time import sleep, time, strftime, localtime
 from prcess_exception import wrap_process_exceptions
 
 CALC_FUNC_INTERVAL = 2  # 通用调用函数间隔(秒)
+SECTOR_SIZE_FALLBACK = 512  # 默认扇区大小 512
 
 
 class SysMonitor(object):
@@ -53,6 +54,9 @@ class SysMonitor(object):
         self.prev_net_receive_byte = 0
         self.prev_net_send_byte = 0
         self.prev_net_time = 0
+        self.prev_disk_time = 0
+        self.prev_disk_rbytes = 0
+        self.prev_disk_wbytes = 0
 
     @wrap_process_exceptions
     def get_total_cpu_time(self):
@@ -386,3 +390,152 @@ class SysMonitor(object):
         except socket.error:
             return "failed"
         return addr
+
+    # reference:https://github.com/giampaolo/psutil/blob/ffe8a9d280c397e8fd46eb1422c2838179cfb5d9/psutil/_pslinux.py#L1052
+    @wrap_process_exceptions
+    def disk_io_counters(self):
+        """获取磁盘IO数据"""
+
+        """Return disk I/O statistics for every disk installed on the
+        system as a dict of raw tuples.
+        """
+
+        # determine partitions we want to look for
+        def get_partitions():
+            partitions = []
+            with open("/proc/partitions") as f:
+                lines = f.readlines()[2:]
+            for line in reversed(lines):
+                _, _, _, name = line.split()
+                if name[-1].isdigit():
+                    # we're dealing with a partition (e.g. 'sda1'); 'sda' will
+                    # also be around but we want to omit it
+                    partitions.append(name)
+                else:
+                    if not partitions or not partitions[-1].startswith(name):
+                        # we're dealing with a disk entity for which no
+                        # partitions have been defined (e.g. 'sda' but
+                        # 'sda1' was not around), see:
+                        # https://github.com/giampaolo/psutil/issues/338
+                        partitions.append(name)
+            return partitions
+
+        def get_sector_size(partition):
+            """Return the sector size of a partition.
+            Used by disk_io_counters().
+            """
+            try:
+                with open("/sys/block/%s/queue/hw_sector_size" % partition, "rt") as f:
+                    return int(f.read())
+            except (IOError, ValueError):
+                # man iostat states that sectors are equivalent with blocks and
+                # have a size of 512 bytes since 2.4 kernels.
+                return SECTOR_SIZE_FALLBACK
+
+        retdict = {}
+        partitions = get_partitions()
+        with open("/proc/diskstats") as f:
+            lines = f.readlines()
+        for line in lines:
+            # OK, this is a bit confusing. The format of /proc/diskstats can
+            # have 3 variations.
+            # On Linux 2.4 each line has always 15 fields, e.g.:
+            # "3     0   8 hda 8 8 8 8 8 8 8 8 8 8 8"
+            # On Linux 2.6+ each line *usually* has 14 fields, and the disk
+            # name is in another position, like this:
+            # "3    0   hda 8 8 8 8 8 8 8 8 8 8 8"
+            # ...unless (Linux 2.6) the line refers to a partition instead
+            # of a disk, in which case the line has less fields (7):
+            # "3    1   hda1 8 8 8 8"
+            # See:
+            # https://www.kernel.org/doc/Documentation/iostats.txt
+            # https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
+            fields = line.split()
+            fields_len = len(fields)
+            if fields_len == 15:
+                # Linux 2.4
+                name = fields[3]
+                reads = int(fields[2])
+                (reads_merged, rbytes, rtime, writes, writes_merged,
+                 wbytes, wtime, _, busy_time, _) = map(int, fields[4:14])
+            elif fields_len == 14:
+                # Linux 2.6+, line referring to a disk
+                name = fields[2]
+                (reads, reads_merged, rbytes, rtime, writes, writes_merged,
+                 wbytes, wtime, _, busy_time, _) = map(int, fields[3:14])
+            elif fields_len == 7:
+                # Linux 2.6+, line referring to a partition
+                name = fields[2]
+                reads, rbytes, writes, wbytes = map(int, fields[3:])
+                rtime = wtime = reads_merged = writes_merged = busy_time = 0
+            else:
+                raise ValueError("not sure how to interpret line %r" % line)
+
+            if name in partitions:
+                ssize = get_sector_size(name)
+                rbytes *= ssize
+                wbytes *= ssize
+                retdict[name] = (reads, writes, rbytes, wbytes, rtime, wtime,
+                                 reads_merged, writes_merged, busy_time)
+        return retdict
+
+    def get_disk_io(self):
+        """计算磁盘io [读取字节数,写入字节数]"""
+        rbytes, wbytes = 0, 0
+        io_data = self.disk_io_counters()
+        for name in io_data.keys():
+            rbytes += io_data[name][2]
+            wbytes += io_data[name][3]
+
+        return rbytes, wbytes
+
+    def calc_io_speed(self):
+        """计算读写速度 [读取,写入(单位MB/s)]"""
+        # todo : 这里的速度要比process所计算的和iotops所显示的慢一倍左右,但是和psutil显示一致
+        # 未初始化
+        if self.prev_disk_time == 0:
+            self.prev_disk_rbytes, self.prev_disk_wbytes = self.get_disk_io()
+            self.prev_disk_time = time()
+            return 0., 0.
+        # 计算io速度
+        current_disk_rbytes, current_disk_wbytes = self.get_disk_io()
+        current_disk_time = time()
+        read_MBs = round((current_disk_rbytes - self.prev_disk_rbytes) / (1024. ** 2)
+                         / (current_disk_time - self.prev_disk_time), 2)
+        write_MBs = round((current_disk_wbytes - self.prev_disk_wbytes) / (1024. ** 2)
+                          / (current_disk_time - self.prev_disk_time), 2)
+        self.prev_disk_rbytes, self.prev_disk_wbytes = current_disk_rbytes, current_disk_wbytes
+        self.prev_disk_time = current_disk_time
+        return read_MBs, write_MBs
+
+    def __io_speed_debug_code(self):
+        """debug code"""
+        # import os
+        # import psutil
+        # from process_monitor import ProcMonitor
+        #
+        # pid = os.getpid()
+        # p = ProcMonitor()
+        # s = SysMonitor()
+        # p.watch_process(pid)
+        #
+        # print p.calc_process_io_speed(pid)
+        # print s.calc_io_speed()
+        # print s.disk_io_counters()
+        # print psutil.disk_io_counters(perdisk=False)
+        #
+        # print time()
+        # # print "reads, writes, rbytes, wbytes, rtime, wtime,reads_merged, writes_merged, busy_time"
+        # for i in xrange(10):
+        #     # print s.disk_io_counters()['vda1']
+        #     # print s.get_disk_io()
+        #     with open('test_write.txt', "w") as f:
+        #         c = 10000000
+        #         while c != 0:
+        #             c -= 1
+        #             f.write("!@#$%^&*()_+\n")
+        # print time()
+        # print s.calc_io_speed()
+        # print p.calc_process_io_speed(pid)
+        # print s.disk_io_counters()
+        # print psutil.disk_io_counters(perdisk=False)

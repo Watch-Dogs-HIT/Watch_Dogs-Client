@@ -37,7 +37,7 @@ process_manager = ProcManager()
 system_monitor.calc_cpu_percent()
 system_monitor.calc_cpu_percent_by_cores()
 system_monitor.calc_net_speed()
-
+system_monitor.calc_io_speed()
 # log
 logger.error("Watch_Dogs-Clinet@" + str(system_monitor.get_intranet_ip()) + "start at" + setting.get_local_time())
 
@@ -143,6 +143,13 @@ def sys_mem_percent():
     return str(system_monitor.calc_mem_percent())
 
 
+@app.route("/sys/net")
+@request_source_check
+def sys_net_percent():
+    global system_monitor
+    return jsonify(system_monitor.calc_net_speed())
+
+
 @app.route("/sys/net/devices")
 @request_source_check
 def sys_net_devices():
@@ -168,11 +175,11 @@ def sys_net_ip():
     return jsonify(res)
 
 
-@app.route("/sys/net/percent")
+@app.route("/sys/io")
 @request_source_check
-def sys_net_percent():
+def sys_io():
     global system_monitor
-    return jsonify(system_monitor.calc_net_speed())
+    return jsonify(system_monitor.calc_io_speed())
 
 
 @app.route("/sys/disk/stat")
@@ -284,7 +291,7 @@ def process_all_info(pid):
     global process_monotor
     res = process_monotor.get_process_info(pid)
     res["cpu"] = process_monotor.calc_process_cpu_percent(pid)
-    res["io"] = process_monotor.calc_process_cpu_io(pid)
+    res["io"] = process_monotor.calc_process_io_speed(pid)
     res["mem"] = process_monotor.get_process_mem(pid)
     if process_monotor.net_monitor_ability:
         res["net"] = process_monotor.calc_process_net_speed(pid)
@@ -329,7 +336,7 @@ def proc_watch_add_pid(pid):
         process_monotor.watch_process(pid)
         # init process data
         process_monotor.calc_process_cpu_percent(pid)
-        process_monotor.calc_process_cpu_io(pid)
+        process_monotor.calc_process_io_speed(pid)
         if process_monotor.net_monitor_ability:
             process_monotor.calc_process_net_speed(pid)
     return str(process_monotor.is_process_watched(pid))
@@ -363,7 +370,7 @@ def proc_pid_cpu(pid):
 @request_source_check
 def proc_pid_io(pid):
     global process_monotor
-    return jsonify(process_monotor.calc_process_cpu_io(pid, style="M"))
+    return jsonify(process_monotor.calc_process_io_speed(pid, style="M"))
 
 
 @app.route("/proc/<int:pid>/net")
