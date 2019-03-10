@@ -418,14 +418,15 @@ def api_no_found(e):
 
 
 if __name__ == "__main__":
-    # tornado
-    http_server = HTTPServer(WSGIContainer(app))
-    http_server.listen(setting.PORT)
-    IOLoop.instance().start()
+    # 利用tornado部署flask应用
+    # http_server = HTTPServer(WSGIContainer(app))
+    # http_server.listen(setting.PORT, )
+    # IOLoop.instance().start()
+
     # flask demo
-    # app.run(
-    #     host="0.0.0.0",
-    #     port=setting.PORT,
-    #     debug=True,
-    #     threaded=True
-    # )
+    app.run(
+        host="0.0.0.0",
+        port=setting.PORT,
+        debug=False,
+        threaded=True
+    )
