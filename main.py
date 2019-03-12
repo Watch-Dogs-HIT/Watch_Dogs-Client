@@ -11,6 +11,7 @@ Watch_Dogs
 
 import getpass
 import functools
+import traceback
 from tornado.ioloop import IOLoop
 from tornado.wsgi import WSGIContainer
 from tornado.httpserver import HTTPServer
@@ -59,8 +60,10 @@ def request_source_check(func):
         try:
             res = func(*args, **kw)
         except Exception as e:
-            logger.error("Error" + str(e))
-            return jsonify({"Error": str(e)}), 500
+            logger.error("Error " + str(e.__class__) + " | " + e.message)
+            logger.error("Error details : " + traceback.format_exc())
+            return jsonify(
+                {"Error": e.message, "Error type": str(e.__class__), "Error detail": traceback.format_exc()}), 500
         return res
 
     return wrapper
@@ -285,7 +288,7 @@ def log_keyword_lines():
 # -----process all-----
 
 @app.route("/proc/<int:pid>/")
-@request_source_check
+# @request_source_check
 def process_all_info(pid):
     """进程所有信息汇总"""
     global process_monotor

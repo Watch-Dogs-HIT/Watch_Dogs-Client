@@ -189,7 +189,7 @@ class ProcMonitor(object):
                 process_cpu_percent = round(
                     (current_process_cpu_time - process_info["prev_process_cpu_time"]) * 100.0 \
                     / (current_cpu_total_time - process_info["prev_total_cpu_time"])
-                    , 2)
+                    , 4)
                 process_info["prev_total_cpu_time"] = current_cpu_total_time
                 process_info["prev_process_cpu_time"] = current_process_cpu_time
                 return process_cpu_percent
@@ -324,7 +324,6 @@ class ProcMonitor(object):
             else:  # 非第一次计算
                 current_time = time()
                 current_rchar, current_wchar = self.get_process_io(int(pid))
-
                 read_IO_speed = round(
                     (current_rchar - process_info["prev_io"][0]) / io_speed_units /
                     (current_time - process_info["prev_io_read_time"])
@@ -333,10 +332,8 @@ class ProcMonitor(object):
                     (current_wchar - process_info["prev_io"][1]) / io_speed_units /
                     (current_time - process_info["prev_io_read_time"])
                     , 2)
-
                 process_info["prev_io"] = [current_rchar, current_wchar]
                 process_info["prev_io_read_time"] = current_time
-
                 return read_IO_speed, write_IO_speed
         else:
             return -1., -1.
@@ -488,7 +485,7 @@ class ProcMonitor(object):
                         if now_net_data["sent_kbs"] == 0.0 and now_net_data["recv_kbs"] == 0.0:  # 有可能是过期数据
                             unixtime = time()
                         else:
-                            unixtime = prev_net_data["unix_timestamp"]
+                            unixtime = now_net_data["unix_timestamp"]
                         send_kbps = round((now_net_data["sent_bytes"] - prev_net_data["sent_bytes"]) / 1024. / \
                                           (unixtime - prev_net_data["unix_timestamp"]), 2)
                         recv_kbps = round((now_net_data["recv_bytes"] - prev_net_data["recv_bytes"]) / 1024. / \
