@@ -7,7 +7,8 @@ Watch_Dogs - Client
 ```uwsgi --ini uwsgi.ini``` 即可启动
 
 #### 关闭
-uwsgi --reload uwsgi.pid
+uwsgi --stop uwsgi.pid    
+#### 重启
 uwsgi --reload uwsgi.pid
 
 
