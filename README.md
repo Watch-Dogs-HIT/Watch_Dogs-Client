@@ -2,9 +2,14 @@ Watch_Dogs - Client
 ===================
 基于Linux远程主机及进程状态监测系统 - 远程监控客户端
 
-### 启动
+#### 启动
 程序采用了uWSGI结合flask构建HTTP服务器,在程序文件根目录下输入:     
 ```uwsgi --ini uwsgi.ini``` 即可启动
+
+#### 关闭
+uwsgi --reload uwsgi.pid
+uwsgi --reload uwsgi.pid
+
 
 ### 核心功能
 基于Linux proc文件系统实现了远程主机及进程状态检测与管理
