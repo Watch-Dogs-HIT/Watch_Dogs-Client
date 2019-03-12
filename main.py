@@ -430,3 +430,5 @@ if __name__ == "__main__":
         debug=False,
         threaded=True
     )
+
+    #　todo : 更加完善uwsgi.ini的配置参数?
