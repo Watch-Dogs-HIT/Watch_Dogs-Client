@@ -431,6 +431,9 @@ class ProcMonitor(object):
             process_net_data["recv_kbs"] = round(data.contents.recv_kbs, 2)
 
             self.process_monitor_dict["libnethogs_data"][str(data.contents.pid)] = process_net_data
+            # 初始化原始记录
+            if not self.process_monitor_dict["process"][str(data.contents.pid)]["prev_net_data"]:
+                self.process_monitor_dict["process"][str(data.contents.pid)]["prev_net_data"] = process_net_data
 
     def init_nethogs_thread(self):
         """nethogs进程流量监测线程 - 初始化"""
@@ -461,17 +464,19 @@ class ProcMonitor(object):
         else:
             return {"error": "No such process {}".format(str(pid))}
 
-    def calc_process_net_speed(self, pid, speed_type="recent", long_term_sec_interval=6000):
+    def calc_process_net_speed(self, pid, speed_type="recent", long_term_sec_interval=3000):
         """
         计算进程网络上传,下载速度[Kbps, kbps]
         瞬时网络速度计算/长期(10min)网络速度计算
         """
+        # todo : 这里的逻辑经过几次修改写的太难看了,有空的话需要重构一下
         if self.is_process_watched(pid):
             process_info = self.process_monitor_dict["process"][str(pid)]
             if speed_type == "recent":  # 瞬时
                 process_net_data = self.process_monitor_dict["libnethogs_data"].get(str(pid), {})
                 if process_net_data:
-                    process_info["prev_net_data"] = process_net_data
+                    if not process_info["prev_net_data"]:
+                        process_info["prev_net_data"] = process_net_data
                     return process_net_data["sent_kbs"], process_net_data["recv_kbs"]
                 else:
                     return 0., 0.
@@ -479,12 +484,19 @@ class ProcMonitor(object):
                 prev_net_data = process_info["prev_net_data"]
                 if prev_net_data:
                     now_net_data = self.get_process_net_info(pid)
-                    send_kbps = round((now_net_data["sent_bytes"] - prev_net_data["sent_bytes"]) / 1024. / \
-                                      (now_net_data["unix_timestamp"] - prev_net_data["unix_timestamp"]), 2)
-                    recv_kbps = round((now_net_data["recv_bytes"] - prev_net_data["recv_bytes"]) / 1024. / \
-                                      (now_net_data["unix_timestamp"] - prev_net_data["unix_timestamp"]), 2)
-                    if time() - prev_net_data["unix_timestamp"] > long_term_sec_interval:  # 达到长期速度计算区间
-                        process_info["prev_net_data"] = prev_net_data  # 更新旧记录
+                    if now_net_data != prev_net_data:  # 防止 /0
+                        if now_net_data["sent_kbs"] == 0.0 and now_net_data["recv_kbs"] == 0.0:  # 有可能是过期数据
+                            unixtime = time()
+                        else:
+                            unixtime = prev_net_data["unix_timestamp"]
+                        send_kbps = round((now_net_data["sent_bytes"] - prev_net_data["sent_bytes"]) / 1024. / \
+                                          (unixtime - prev_net_data["unix_timestamp"]), 2)
+                        recv_kbps = round((now_net_data["recv_bytes"] - prev_net_data["recv_bytes"]) / 1024. / \
+                                          (unixtime - prev_net_data["unix_timestamp"]), 2)
+                        if time() - prev_net_data["unix_timestamp"] > long_term_sec_interval:  # 达到长期速度计算区间
+                            process_info["prev_net_data"] = prev_net_data  # 更新旧记录
+                    else:
+                        return 0., 0.
                     return send_kbps, recv_kbps
                 else:
                     return 0., 0.

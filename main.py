@@ -294,7 +294,8 @@ def process_all_info(pid):
     res["io"] = process_monotor.calc_process_io_speed(pid)
     res["mem"] = process_monotor.get_process_mem(pid)
     if process_monotor.net_monitor_ability:
-        res["net"] = process_monotor.calc_process_net_speed(pid)
+        res["net_recent"] = process_monotor.calc_process_net_speed(pid, speed_type="recent")
+        res["net"] = process_monotor.calc_process_net_speed(pid, speed_type="long")
     return jsonify(res)
 
 
@@ -430,5 +431,3 @@ if __name__ == "__main__":
         debug=False,
         threaded=True
     )
-
-    #　todo : 更加完善uwsgi.ini的配置参数?
