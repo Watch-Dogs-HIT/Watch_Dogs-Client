@@ -299,6 +299,9 @@ def process_all_info(pid):
     if process_monotor.net_monitor_ability:
         res["net_recent"] = process_monotor.calc_process_net_speed(pid, speed_type="recent")
         res["net"] = process_monotor.calc_process_net_speed(pid, speed_type="long")
+    else:
+        res["net_recent"] = [-2., -2.]
+        res["net"] = [-2., -2.]
     return jsonify(res)
 
 
