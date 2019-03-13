@@ -7,10 +7,14 @@ Watch_Dogs - Client
 ```uwsgi --ini uwsgi.ini``` 即可启动
 
 #### 关闭
-uwsgi --stop uwsgi.pid    
+```uwsgi --stop uwsgi.pid```
+    
 #### 重启
-uwsgi --reload uwsgi.pid
+```uwsgi --reload uwsgi.pid```
 
+##### uwsgi说明文档
+[利用uwsgi部署flask应用](https://uwsgi-docs-zh.readthedocs.io/zh_CN/latest/WSGIquickstart.html#uwsgipython)   
+*注意,总是避免以root用户运行你的uWSGI实例*
 
 ### 核心功能
 基于Linux proc文件系统实现了远程主机及进程状态检测与管理
