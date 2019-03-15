@@ -33,7 +33,7 @@ logger = setting.logger
 ALLOWED_REQUEST_ADDR = setting.ALLOWED_REQUEST_ADDR_LIST
 LINUX_USER = getpass.getuser()
 system_monitor = SysMonitor()
-process_monotor = ProcMonitor()
+process_monitor = ProcMonitor()
 process_manager = ProcManager()
 # 初始化监控数据
 system_monitor.calc_cpu_percent()
@@ -64,7 +64,7 @@ def request_source_check(func):
             logger.error("Error " + str(e.__class__) + " | " + e.message)
             logger.error("Error details : " + traceback.format_exc())
             return jsonify(
-                {"Error": e.message, "Error type": str(e.__class__), "Error detail": traceback.format_exc()}), 500
+                {"Error": e.message, "Error type": str(e.__class__), "Error detail": traceback.format_exc()}), 501
         return res
 
     return wrapper
@@ -78,8 +78,8 @@ def index():
     res = {
         "user": LINUX_USER,
         "time": setting.get_local_time(),
-        "nethogs env": process_monotor.is_libnethogs_install(),
-        "nethogs status": process_monotor.nethogs_running_status
+        "nethogs env": process_monitor.is_libnethogs_install(),
+        "nethogs status": process_monitor.nethogs_running_status
     }
     return jsonify(res)
 
@@ -293,15 +293,15 @@ def log_keyword_lines():
 @request_source_check
 def process_all_info(pid):
     """进程所有信息汇总"""
-    global process_monotor
-    if process_monotor.is_process_watched(pid):
-        res = process_monotor.get_process_info(pid)
-        res["cpu"] = process_monotor.calc_process_cpu_percent(pid)
-        res["io"] = process_monotor.calc_process_io_speed(pid)
-        res["mem"] = process_monotor.get_process_mem(pid)
-        if process_monotor.nethogs_running_status:
-            res["net_recent"] = process_monotor.calc_process_net_speed(pid, speed_type="recent")
-            res["net"] = process_monotor.calc_process_net_speed(pid, speed_type="long")
+    global process_monitor
+    if process_monitor.is_process_watched(pid):
+        res = process_monitor.get_process_info(pid)
+        res["cpu"] = process_monitor.calc_process_cpu_percent(pid)
+        res["io"] = process_monitor.calc_process_io_speed(pid)
+        res["mem"] = process_monitor.get_process_mem(pid)
+        if process_monitor.nethogs_running_status:
+            res["net_recent"] = process_monitor.calc_process_net_speed(pid, speed_type="recent")
+            res["net"] = process_monitor.calc_process_net_speed(pid, speed_type="long")
         else:  # nethogs error
             res["net_recent"] = [-2., -2.]
             res["net"] = [-2., -2.]
@@ -329,37 +329,37 @@ def proc_all_pid_name():
 @app.route("/proc/watch/all")
 @request_source_check
 def proc_watch_all():
-    global process_monotor
-    return jsonify(list(process_monotor.get_all_watched_pid()))
+    global process_monitor
+    return jsonify(list(process_monitor.get_all_watched_pid()))
 
 
 @app.route("/proc/watch/is/<int:pid>")
 @request_source_check
 def proc_watch_is_pid(pid):
-    global process_monotor
-    return str(process_monotor.is_process_watched(pid))
+    global process_monitor
+    return str(process_monitor.is_process_watched(pid))
 
 
 @app.route("/proc/watch/add/<int:pid>", )
 @request_source_check
 def proc_watch_add_pid(pid):
-    global process_monotor
-    if not process_monotor.is_process_watched(pid):
-        process_monotor.watch_process(pid)
+    global process_monitor
+    if not process_monitor.is_process_watched(pid):
+        process_monitor.watch_process(pid)
         # init process data
-        process_monotor.calc_process_cpu_percent(pid)
-        process_monotor.calc_process_io_speed(pid)
-        if process_monotor.net_monitor_ability:
-            process_monotor.calc_process_net_speed(pid)
-    return str(process_monotor.is_process_watched(pid))
+        process_monitor.calc_process_cpu_percent(pid)
+        process_monitor.calc_process_io_speed(pid)
+        if process_monitor.net_monitor_ability:
+            process_monitor.calc_process_net_speed(pid)
+    return str(process_monitor.is_process_watched(pid))
 
 
 @app.route("/proc/watch/remove/<int:pid>")
 @request_source_check
 def proc_watch_remove_pid(pid):
-    global process_monotor
-    process_monotor.remove_watched_process(pid)
-    return str(process_monotor.is_process_watched(pid))
+    global process_monitor
+    process_monitor.remove_watched_process(pid)
+    return str(process_monitor.is_process_watched(pid))
 
 
 # -----process-----
@@ -367,45 +367,45 @@ def proc_watch_remove_pid(pid):
 @app.route("/proc/<int:pid>/info")
 @request_source_check
 def proc_pid_info(pid):
-    global process_monotor
-    return jsonify(process_monotor.get_process_info(pid))
+    global process_monitor
+    return jsonify(process_monitor.get_process_info(pid))
 
 
 @app.route("/proc/<int:pid>/cpu")
 @request_source_check
 def proc_pid_cpu(pid):
-    global process_monotor
-    return jsonify(process_monotor.calc_process_cpu_percent(pid))
+    global process_monitor
+    return jsonify(process_monitor.calc_process_cpu_percent(pid))
 
 
 @app.route("/proc/<int:pid>/io")
 @request_source_check
 def proc_pid_io(pid):
-    global process_monotor
-    return jsonify(process_monotor.calc_process_io_speed(pid, style="M"))
+    global process_monitor
+    return jsonify(process_monitor.calc_process_io_speed(pid, style="M"))
 
 
 @app.route("/proc/<int:pid>/net")
 @request_source_check
 def proc_pid_net(pid):
-    global process_monotor
-    return jsonify(process_monotor.calc_process_net_speed(pid))
+    global process_monitor
+    return jsonify(process_monitor.calc_process_net_speed(pid))
 
 
 @app.route("/proc/<int:pid>/mem")
 @request_source_check
 def proc_pid_mem(pid):
-    global process_monotor
-    return jsonify(process_monotor.get_process_mem(pid))
+    global process_monitor
+    return jsonify(process_monitor.get_process_mem(pid))
 
 
 @app.route("/path/size/total")
 @request_source_check
 def path_size_total():
-    global process_monotor
+    global process_monitor
     if request.args.has_key("path"):
         path = request.args.get("path").encode('utf-8')
-        return str(process_monotor.get_path_total_size(path))
+        return str(process_monitor.get_path_total_size(path))
     else:
         return jsonify({"ERROR": "NO path"})
 
@@ -413,10 +413,10 @@ def path_size_total():
 @app.route("/path/size/avail")
 @request_source_check
 def path_size_avail():
-    global process_monotor
+    global process_monitor
     if request.args.has_key("path"):
         path = request.args.get("path").encode('utf-8')
-        return jsonify(process_monotor.get_path_avail_size(path))
+        return jsonify(process_monitor.get_path_avail_size(path))
     else:
         return jsonify({"ERROR": "NO path"})
 
@@ -431,14 +431,14 @@ def api_no_found(e):
 
 if __name__ == "__main__":
     # 利用tornado部署flask应用
-    # http_server = HTTPServer(WSGIContainer(app))
-    # http_server.listen(setting.PORT, )
-    # IOLoop.instance().start()
+    http_server = HTTPServer(WSGIContainer(app))
+    http_server.listen(setting.PORT, )
+    IOLoop.instance().start()
 
     # flask demo
-    app.run(
-        host="0.0.0.0",
-        port=setting.PORT,
-        debug=True,
-        threaded=True
-    )
+    # app.run(
+    #     host="0.0.0.0",
+    #     port=setting.PORT,
+    #     debug=False,
+    #     threaded=True
+    # )

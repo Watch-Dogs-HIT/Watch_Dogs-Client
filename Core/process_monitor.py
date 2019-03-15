@@ -483,19 +483,24 @@ class ProcMonitor(object):
                     now_net_data = self.get_process_net_info(pid)
                     if now_net_data != prev_net_data:  # 防止 /0
                         if now_net_data["sent_kbs"] == 0.0 and now_net_data["recv_kbs"] == 0.0:  # 有可能是过期数据
-                            unixtime = time()
+                            unix_time = time()
                         else:
-                            unixtime = now_net_data["unix_timestamp"]
+                            unix_time = now_net_data["unix_timestamp"]
+                        # 计算网速
                         send_kbps = round((now_net_data["sent_bytes"] - prev_net_data["sent_bytes"]) / 1024. / \
-                                          (unixtime - prev_net_data["unix_timestamp"]), 2)
+                                          (unix_time - prev_net_data["unix_timestamp"]), 2)
                         recv_kbps = round((now_net_data["recv_bytes"] - prev_net_data["recv_bytes"]) / 1024. / \
-                                          (unixtime - prev_net_data["unix_timestamp"]), 2)
-                        if time() - prev_net_data["unix_timestamp"] > long_term_sec_interval:  # 达到长期速度计算区间
-                            process_info["prev_net_data"] = prev_net_data  # 更新旧记录
-                    else:
+                                          (unix_time - prev_net_data["unix_timestamp"]), 2)
+                        if send_kbps < 0 or recv_kbps < 0:  # for a bug
+                            print prev_net_data
+                            print now_net_data, unix_time
+                        if unix_time - prev_net_data["unix_timestamp"] > long_term_sec_interval:  # 达到长期速度计算区间
+                            process_info["prev_net_data"] = now_net_data  # 更新旧记录
+
+                    else:  # 最近两次io数据一致
                         return 0.00002, 0.00002
                     return send_kbps, recv_kbps
-                else:
+                else:  # 一直没有io数据
                     return 0.00003, 0.00003
         else:
             return -1., -1.
