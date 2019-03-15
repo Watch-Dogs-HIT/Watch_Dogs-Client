@@ -38,6 +38,24 @@ class ProcessException(Exception):
 
 # todo : 有时间要弄清楚python oop的相关内容,感觉这里异常类写的有点问题.
 
+class NoWatchedProcess(ProcessException):
+    """
+    进程未被监控
+    """
+
+    def __init__(self, pid, msg=None):
+        # 获取信息
+        self.pid = pid
+        self.msg = msg
+        details = ""
+        if not msg:
+            if self.pid:
+                details = " (pid={})".format(self.pid)
+            self.msg = "process still not be watched,please add process watch." + details
+        # 构造异常
+        ProcessException.__init__(self, self.msg)
+
+
 class NoSuchProcess(ProcessException):
     """
     进程不存在
