@@ -23,6 +23,7 @@ from setting import Setting
 from Core.sys_monitor import SysMonitor
 from Core.process_manage import ProcManager
 from Core.process_monitor import ProcMonitor
+from Core.prcess_exception import NoWatchedProcess
 
 app = Flask("Watch_Dogs-Client")
 
@@ -77,7 +78,8 @@ def index():
     res = {
         "user": LINUX_USER,
         "time": setting.get_local_time(),
-        "nethogs env": process_monotor.is_libnethogs_install()
+        "nethogs env": process_monotor.is_libnethogs_install(),
+        "nethogs status": process_monotor.nethogs_running_status
     }
     return jsonify(res)
 
@@ -288,21 +290,24 @@ def log_keyword_lines():
 # -----process all-----
 
 @app.route("/proc/<int:pid>/")
-# @request_source_check
+@request_source_check
 def process_all_info(pid):
     """进程所有信息汇总"""
     global process_monotor
-    res = process_monotor.get_process_info(pid)
-    res["cpu"] = process_monotor.calc_process_cpu_percent(pid)
-    res["io"] = process_monotor.calc_process_io_speed(pid)
-    res["mem"] = process_monotor.get_process_mem(pid)
-    if process_monotor.net_monitor_ability:
-        res["net_recent"] = process_monotor.calc_process_net_speed(pid, speed_type="recent")
-        res["net"] = process_monotor.calc_process_net_speed(pid, speed_type="long")
+    if process_monotor.is_process_watched(pid):
+        res = process_monotor.get_process_info(pid)
+        res["cpu"] = process_monotor.calc_process_cpu_percent(pid)
+        res["io"] = process_monotor.calc_process_io_speed(pid)
+        res["mem"] = process_monotor.get_process_mem(pid)
+        if process_monotor.nethogs_running_status:
+            res["net_recent"] = process_monotor.calc_process_net_speed(pid, speed_type="recent")
+            res["net"] = process_monotor.calc_process_net_speed(pid, speed_type="long")
+        else:  # nethogs error
+            res["net_recent"] = [-2., -2.]
+            res["net"] = [-2., -2.]
+        return jsonify(res)
     else:
-        res["net_recent"] = [-2., -2.]
-        res["net"] = [-2., -2.]
-    return jsonify(res)
+        raise NoWatchedProcess(str(pid))
 
 
 @app.route("/proc/all_pid/")
@@ -434,6 +439,6 @@ if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=setting.PORT,
-        debug=False,
+        debug=True,
         threaded=True
     )

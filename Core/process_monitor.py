@@ -313,7 +313,7 @@ class ProcMonitor(object):
         elif style == "K":  # KB/s
             io_speed_units = 1000. ** 1
         else:  # 未指定IO速度单位
-            return -1, -1
+            return -1024, -1024
 
         if str(pid) in self.process_monitor_dict["process"]:  # 进程数据必须先被初始化
             process_info = self.process_monitor_dict["process"][str(pid)]
@@ -448,18 +448,17 @@ class ProcMonitor(object):
         monitor_thread.start()
         monitor_thread.join(0.5)
 
-        return
+        return monitor_thread
 
     def get_process_net_info(self, pid):
         """获取进程的网络信息(基于nethogs)"""
         if not self.net_monitor_ability and self.nethogs_running_status:
-            print "Error : libnethogs is not running"
-            return {"error": "libnethogs is not running"}
+            return {"Error": "libnethogs is not running"}
 
         if self.is_process_watched(int(pid)):
             return self.process_monitor_dict["libnethogs_data"].get(str(pid), {})
         else:
-            return {"error": "No such process {}".format(str(pid))}
+            return {"Error": "No such process {}".format(str(pid))}
 
     def calc_process_net_speed(self, pid, speed_type="recent", long_term_sec_interval=3000):
         """
@@ -467,6 +466,7 @@ class ProcMonitor(object):
         瞬时网络速度计算/长期(10min)网络速度计算
         """
         # todo : 这里的逻辑经过几次修改写的太难看了,有空的话需要重构一下
+        # note : 为了检测nethogs内容,差异化返回值
         if self.is_process_watched(pid):
             process_info = self.process_monitor_dict["process"][str(pid)]
             if speed_type == "recent":  # 瞬时
@@ -476,7 +476,7 @@ class ProcMonitor(object):
                         process_info["prev_net_data"] = process_net_data
                     return process_net_data["sent_kbs"], process_net_data["recv_kbs"]
                 else:
-                    return 0., 0.
+                    return 0.00001, 0.00001
             else:  # 长期
                 prev_net_data = process_info["prev_net_data"]
                 if prev_net_data:
@@ -493,10 +493,10 @@ class ProcMonitor(object):
                         if time() - prev_net_data["unix_timestamp"] > long_term_sec_interval:  # 达到长期速度计算区间
                             process_info["prev_net_data"] = prev_net_data  # 更新旧记录
                     else:
-                        return 0., 0.
+                        return 0.00002, 0.00002
                     return send_kbps, recv_kbps
                 else:
-                    return 0., 0.
+                    return 0.00003, 0.00003
         else:
             return -1., -1.
 
@@ -532,14 +532,3 @@ class NethogsMonitorRecord(ctypes.Structure):
                 ("sent_kbs", ctypes.c_float),
                 ("recv_kbs", ctypes.c_float),
                 )
-
-
-if __name__ == '__main__':
-    p = ProcMonitor()
-    print p.get_path_total_size("/home/ubuntu/Watch_Dogs/")
-    print p.get_path_disk_usage("/home/ubuntu/Watch_Dogs/")
-    import psutil
-
-    print psutil.disk_usage("/home/ubuntu/Watch_Dogs/")
-    print psutil.disk_usage("/")
-    exit(-13)
