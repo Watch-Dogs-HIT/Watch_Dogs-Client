@@ -182,17 +182,20 @@ class ProcMonitor(object):
             if not process_info["prev_total_cpu_time"]:  # 第一次计算
                 process_info["prev_total_cpu_time"] = self.SysMonitor.get_total_cpu_time()[0]
                 process_info["prev_process_cpu_time"] = self.get_process_cpu_time(int(pid))
-                return 0
+                return 0.
             else:  # 非第一次计算
                 current_cpu_total_time = self.SysMonitor.get_total_cpu_time()[0]
                 current_process_cpu_time = self.get_process_cpu_time(int(pid))
-                process_cpu_percent = round(
-                    (current_process_cpu_time - process_info["prev_process_cpu_time"]) * 100.0 \
-                    / (current_cpu_total_time - process_info["prev_total_cpu_time"])
-                    , 4)
-                process_info["prev_total_cpu_time"] = current_cpu_total_time
-                process_info["prev_process_cpu_time"] = current_process_cpu_time
-                return process_cpu_percent
+                if current_cpu_total_time - process_info["prev_total_cpu_time"] > 0.:
+                    process_cpu_percent = round(
+                        (current_process_cpu_time - process_info["prev_process_cpu_time"]) * 100.0 \
+                        / (current_cpu_total_time - process_info["prev_total_cpu_time"])
+                        , 4)
+                    process_info["prev_total_cpu_time"] = current_cpu_total_time
+                    process_info["prev_process_cpu_time"] = current_process_cpu_time
+                    return process_cpu_percent
+                else:  # 为了防止两次计算间隔特别快的情况
+                    return 0.000001
         else:
             return -1
 

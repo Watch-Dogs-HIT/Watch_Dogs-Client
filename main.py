@@ -41,7 +41,7 @@ system_monitor.calc_cpu_percent_by_cores()
 system_monitor.calc_net_speed()
 system_monitor.calc_io_speed()
 # log
-logger.error("Watch_Dogs-Clinet@" + str(system_monitor.get_intranet_ip()) + "start at" + setting.get_local_time())
+logger.error("Watch_Dogs-Clinet @ " + str(system_monitor.get_intranet_ip()) + " start at " + setting.get_local_time())
 
 
 # 在flask使用装饰器是,需要使用functools.wraps({func_name})以使函数的属性顺利传递给外层的@app.route()
