@@ -41,12 +41,13 @@ system_monitor.calc_cpu_percent_by_cores()
 system_monitor.calc_net_speed()
 system_monitor.calc_io_speed()
 # log
-logger.error("Watch_Dogs-Clinet @ " + str(system_monitor.get_intranet_ip()) + " start at " + setting.get_local_time())
+logger.info("Watch_Dogs-Clinet @ " + str(system_monitor.get_intranet_ip()) + " start at " + setting.get_local_time())
 
 
 # 在flask使用装饰器是,需要使用functools.wraps({func_name})以使函数的属性顺利传递给外层的@app.route()
 # reference : https://segmentfault.com/a/1190000006658289
-# reference : https://stackoverflow.com/questions/31900579/view-function-mapping-is-overwriting-an-existing-endpoint-function-when-using-a
+# reference : https://stackoverflow.com/questions/31900579/view-function-mapping-is-overwriting-an-
+# existing-endpoint-function-when-using-a
 
 def request_source_check(func):
     """装饰器 - 请求地址识别"""
@@ -89,6 +90,7 @@ def index():
 @request_source_check
 def sys_info():
     global system_monitor
+    logger.info("collect sys info.")
     return jsonify(system_monitor.get_sys_info())
 
 
@@ -96,6 +98,7 @@ def sys_info():
 @request_source_check
 def sys_loadavg():
     global system_monitor
+    logger.info("collect sys loadavg info.")
     return jsonify(system_monitor.get_sys_loadavg())
 
 
@@ -305,6 +308,7 @@ def process_all_info(pid):
         else:  # nethogs error
             res["net_recent"] = [-2., -2.]
             res["net"] = [-2., -2.]
+        logger.info("collect process({}) info.".format(str(pid)))
         return jsonify(res)
     else:
         raise NoWatchedProcess(str(pid))
@@ -351,6 +355,8 @@ def proc_watch_add_pid(pid):
         process_monitor.calc_process_io_speed(pid)
         if process_monitor.net_monitor_ability:
             process_monitor.calc_process_net_speed(pid)
+        logger.info("add process watch pid = {}".format(str(pid)))
+        logger.info("now watched process list :" + str(process_monitor.get_all_watched_pid()))
     return str(process_monitor.is_process_watched(pid))
 
 
@@ -359,6 +365,8 @@ def proc_watch_add_pid(pid):
 def proc_watch_remove_pid(pid):
     global process_monitor
     process_monitor.remove_watched_process(pid)
+    logger.info("pid = {} process removed".format(str(pid)))
+    logger.info("now watched process list :" + str(process_monitor.get_all_watched_pid()))
     return str(process_monitor.is_process_watched(pid))
 
 

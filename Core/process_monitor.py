@@ -495,8 +495,9 @@ class ProcMonitor(object):
                         recv_kbps = round((now_net_data["recv_bytes"] - prev_net_data["recv_bytes"]) / 1024. / \
                                           (unix_time - prev_net_data["unix_timestamp"]), 2)
                         if send_kbps < 0 or recv_kbps < 0:  # for a bug
-                            print prev_net_data
-                            print now_net_data, unix_time
+                            print "[unexcept error]send_kbps < 0 or recv_kbps < 0"
+                            print "prev_net_data", prev_net_data
+                            print "now_net_data", now_net_data, "calc_net_speed_time:", unix_time
                         if unix_time - prev_net_data["unix_timestamp"] > long_term_sec_interval:  # 达到长期速度计算区间
                             process_info["prev_net_data"] = now_net_data  # 更新旧记录
 

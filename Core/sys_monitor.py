@@ -507,35 +507,3 @@ class SysMonitor(object):
         self.prev_disk_rbytes, self.prev_disk_wbytes = current_disk_rbytes, current_disk_wbytes
         self.prev_disk_time = current_disk_time
         return read_MBs, write_MBs
-
-    def __io_speed_debug_code(self):
-        """debug code"""
-        # import os
-        # import psutil
-        # from process_monitor import ProcMonitor
-        #
-        # pid = os.getpid()
-        # p = ProcMonitor()
-        # s = SysMonitor()
-        # p.watch_process(pid)
-        #
-        # print p.calc_process_io_speed(pid)
-        # print s.calc_io_speed()
-        # print s.disk_io_counters()
-        # print psutil.disk_io_counters(perdisk=False)
-        #
-        # print time()
-        # # print "reads, writes, rbytes, wbytes, rtime, wtime,reads_merged, writes_merged, busy_time"
-        # for i in xrange(10):
-        #     # print s.disk_io_counters()['vda1']
-        #     # print s.get_disk_io()
-        #     with open('test_write.txt', "w") as f:
-        #         c = 10000000
-        #         while c != 0:
-        #             c -= 1
-        #             f.write("!@#$%^&*()_+\n")
-        # print time()
-        # print s.calc_io_speed()
-        # print p.calc_process_io_speed(pid)
-        # print s.disk_io_counters()
-        # print psutil.disk_io_counters(perdisk=False)
