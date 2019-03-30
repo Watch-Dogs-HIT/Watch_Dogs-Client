@@ -495,9 +495,12 @@ class ProcMonitor(object):
                         recv_kbps = round((now_net_data["recv_bytes"] - prev_net_data["recv_bytes"]) / 1024. / \
                                           (unix_time - prev_net_data["unix_timestamp"]), 2)
                         if send_kbps < 0 or recv_kbps < 0:  # for a bug
-                            print "[unexcept error]send_kbps < 0 or recv_kbps < 0"
-                            print "prev_net_data", prev_net_data
-                            print "now_net_data", now_net_data, "calc_net_speed_time:", unix_time
+                            # print "[unexcept error]send_kbps < 0 or recv_kbps < 0"
+                            # print "prev_net_data", prev_net_data
+                            # note : 出现的原因是因为长时间进程无网络数据,部分链接被重置之后,发送接收字节数会变小,
+                            # 因为只会出现于长时间无网络请求的数据,所以这里不做处理,只更新数据,返回0作为网速即可
+                            process_info["prev_net_data"] = now_net_data
+                            return 0.00004, 0.00004
                         if unix_time - prev_net_data["unix_timestamp"] > long_term_sec_interval:  # 达到长期速度计算区间
                             process_info["prev_net_data"] = now_net_data  # 更新旧记录
 
