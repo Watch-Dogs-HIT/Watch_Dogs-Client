@@ -377,7 +377,7 @@ class SysMonitor(object):
         url = "http://ip.42.pl/raw"
         try:
             return urllib2.urlopen(url, timeout=3).read()
-        except urllib2.URLError:
+        except Exception as err:
             return 'time out'
 
     def get_intranet_ip(self):
@@ -387,7 +387,7 @@ class SysMonitor(object):
             csock.connect(("8.8.8.8", 80))
             (addr, port) = csock.getsockname()
             csock.close()
-        except socket.error:
+        except Exception as err:
             return "failed"
         return addr
 
