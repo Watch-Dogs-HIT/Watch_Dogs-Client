@@ -347,7 +347,7 @@ class SysMonitor(object):
             if not total:
                 continue
 
-            used_percent = round(used * 100.0 / total, 4)
+            used_percent = round(used * 100.0 / total, 2)
 
             # 设置返回结果单位(默认为G)
             style_size = 1024.0 ** 3
@@ -360,8 +360,8 @@ class SysMonitor(object):
             disk_stat.append(
                 (device,
                  fstype,
-                 round(total / style_size, 4),
-                 round(used / style_size, 4),
+                 round(total / style_size, 2),
+                 round(used / style_size, 2),
                  used_percent,
                  mount_point)
             )
