@@ -256,6 +256,11 @@ class ProcManager(object):
         return strftime("%Y-%m-%d %H:%M:%S", localtime(os.stat(path).st_atime))
 
     @wrap_process_exceptions
+    def get_log_size(self, path):
+        """获取文件大小 (KB,保留两位小数)"""
+        return round((os.path.getsize(path) / 1024.), 2)
+
+    @wrap_process_exceptions
     def get_log_keyword_lines(self, path, keyword):
         """获取日志文件含有关键词的行"""
         result = []

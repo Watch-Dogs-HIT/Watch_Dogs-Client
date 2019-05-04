@@ -3,18 +3,8 @@ Watch_Dogs - Client
 基于Linux远程主机及进程状态监测系统 - 远程监控客户端
 
 #### 启动
-程序采用了uWSGI结合flask构建HTTP服务器,在程序文件根目录下输入:     
-```uwsgi --ini uwsgi.ini``` 即可启动
-
-#### 关闭
-```uwsgi --stop uwsgi.pid```
-    
-#### 重启
-```uwsgi --reload uwsgi.pid```
-
-##### uwsgi说明文档
-[利用uwsgi部署flask应用](https://uwsgi-docs-zh.readthedocs.io/zh_CN/latest/WSGIquickstart.html#uwsgipython)   
-*注意,总是避免以root用户运行你的uWSGI实例*
+程序采用了tornado作为flask的HTTP服务器,在程序文件根目录下输入:     
+```nohup python -u Watch_Dogs-Client.py &``` 即可启动
 
 ##### 提权方式
 为了获取系统核心数据,不可避免的要涉及到权限的问题.除了最简单的root用户启动程序之外,目前的解决思路如下:     
@@ -98,12 +88,13 @@ Watch_Dogs - Client
 | /sys/net/    | 无 | 上传速度,下载速度(Kbps)     |200|
 | /sys/io    | 无 |读取速度,写入速度(MB/s)      |200|        
 | /sys/disk/stat     | 无 |系统各个挂载点数据      |200|  
-| /proc/search/\<string:key_word\>    |[可选]type(查询类型):contain(包含),match(完全匹配)     |查询到的进程号,名称构成的列表      |200      |
-| /proc/kill/\<int:pid\>    |无     | 无     |200|
-| /proc/start/\<string:execute_file_full_path\>   |无     | 启动之后的进程号     |200 |
-| /log/exist     |path(日志文件地址)     | 日志文件是否存在(true,false)     | 200  |
-| /log/head    |path(日志文件地址),[可选]n(行数)    | 日志文件前n行构成的列表     | 200     |
-| /log/tail    | path(日志文件地址),[可选]n(行数)      | 日志文件后n行构成的列表       |200      |
+| /proc/search/\<string:key_word\>    |\[可选\]type(查询类型):contain(包含),match(完全匹配)     |查询到的进程号,名称构成的列表      |200      |
+| /proc/kill/\<int:pid\>    |无     | 无     |200|    
+| /proc/start/\<string:execute_file_full_path\>   |无     | 启动之后的进程号     |200 |      
+| /log/exist     |path(日志文件地址)     | 日志文件是否存在(true,false)     | 200  |      
+| /log/size     |path(日志文件地址)     | 日志文件大小(KB,保留两位小数)     | 200  |           
+| /log/head    |path(日志文件地址),\[可选\]n(行数)    | 日志文件前n行构成的列表     | 200     |        
+| /log/tail    | path(日志文件地址),\[可选\]n(行数)      | 日志文件后n行构成的列表       |200      |                
 | /log/last_update_time    |path(日志文件地址)      | 日志文件上次更新时间      |   200   |
 | /log/keyword_lines    |path(日志文件地址) ,key_word(关键词)     | 日志文件含有关键词额数行构成的列表(行号,内容) |  200    |
 | /proc/\<int:pid\>/    |无     | 进程数据总览     | 200     |

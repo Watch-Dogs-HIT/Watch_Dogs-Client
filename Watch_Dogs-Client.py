@@ -245,6 +245,16 @@ def log_exist():
     return jsonify({"ERROR": "NO PATH"})
 
 
+@app.route("/log/size")
+@request_source_check
+def log_size():
+    global process_manager
+    if request.args.has_key("path"):
+        path = request.args.get("path").encode('utf-8')
+        return jsonify(process_manager.get_log_size(path))
+    return jsonify({"ERROR": "NO PATH"})
+
+
 @app.route("/log/head")
 @request_source_check
 def log_head():
