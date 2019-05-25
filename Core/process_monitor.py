@@ -463,10 +463,10 @@ class ProcMonitor(object):
         else:
             return {"Error": "No such process {}".format(str(pid))}
 
-    def calc_process_net_speed(self, pid, speed_type="recent", long_term_sec_interval=3000):
+    def calc_process_net_speed(self, pid, speed_type="recent", long_term_sec_interval=300):
         """
         计算进程网络上传,下载速度[Kbps, kbps]
-        瞬时网络速度计算/长期(10min)网络速度计算
+        瞬时网络速度计算/长期(5min)网络速度计算
         """
         # todo : 这里的逻辑经过几次修改写的太难看了,有空的话需要重构一下
         # note : 为了检测nethogs内容,差异化返回值
