@@ -309,21 +309,28 @@ def log_keyword_lines():
 def process_all_info(pid):
     """进程所有信息汇总"""
     global process_monitor
-    if process_monitor.is_process_watched(pid):
-        res = process_monitor.get_process_info(pid)
-        res["cpu"] = process_monitor.calc_process_cpu_percent(pid)
-        res["io"] = process_monitor.calc_process_io_speed(pid)
-        res["mem"] = process_monitor.get_process_mem(pid)
-        if process_monitor.nethogs_running_status:
-            res["net_recent"] = process_monitor.calc_process_net_speed(pid, speed_type="recent")
-            res["net"] = process_monitor.calc_process_net_speed(pid, speed_type="long")
-        else:  # nethogs error
-            res["net_recent"] = [-2., -2.]
-            res["net"] = [-2., -2.]
-        logger.info("collect process({}) info.".format(str(pid)))
-        return jsonify(res)
-    else:
-        raise NoWatchedProcess(str(pid))
+    if not process_monitor.is_process_watched(pid):
+        # import! : 如果未被进程初始化, 则初始化之后在进行计算进程数据
+        process_monitor.watch_process(pid)
+        # init process data
+        process_monitor.calc_process_cpu_percent(pid)
+        process_monitor.calc_process_io_speed(pid)
+        if process_monitor.net_monitor_ability:
+            process_monitor.calc_process_net_speed(pid)
+        logger.info("add process watch pid = {}".format(str(pid)))
+        logger.info("now watched process list :" + str(process_monitor.get_all_watched_pid()))
+    res = process_monitor.get_process_info(pid)
+    res["cpu"] = process_monitor.calc_process_cpu_percent(pid)
+    res["io"] = process_monitor.calc_process_io_speed(pid)
+    res["mem"] = process_monitor.get_process_mem(pid)
+    if process_monitor.nethogs_running_status:
+        res["net_recent"] = process_monitor.calc_process_net_speed(pid, speed_type="recent")
+        res["net"] = process_monitor.calc_process_net_speed(pid, speed_type="long")
+    else:  # nethogs error
+        res["net_recent"] = [-2., -2.]
+        res["net"] = [-2., -2.]
+    logger.info("collect process({}) info.".format(str(pid)))
+    return jsonify(res)
 
 
 @app.route("/proc/all_pid/")
