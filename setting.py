@@ -45,6 +45,7 @@ class Setting(object):
 
     PORT = 80
     ALLOWED_REQUEST_ADDR_LIST = []
+    NET_MONITOR = False
 
     # @staticmethod
     def static_value_refresh(self):
@@ -55,6 +56,7 @@ class Setting(object):
         # 读取参数
         Setting.ALLOWED_REQUEST_ADDR_LIST = map(lambda u: u.encode("utf-8"), setting["allowed_request_addr"])
         Setting.PORT = setting["port"]
+        Setting.NET_MONITOR = setting["net_monitor"]
         if not Setting.ALLOWED_REQUEST_ADDR_LIST:  # 若不填则默认允许所有地址发出请求
             Setting.ALLOWED_REQUEST_ADDR_LIST = ["0.0.0.0"]
         return setting

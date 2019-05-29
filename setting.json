@@ -5,5 +5,6 @@
   "allowed_request_addr": [
     "0.0.0.0"
   ],
-  "port": 8000
+  "port": 8000,
+  "net_monitor": false
 }

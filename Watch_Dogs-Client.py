@@ -33,7 +33,7 @@ logger = setting.logger
 ALLOWED_REQUEST_ADDR = setting.ALLOWED_REQUEST_ADDR_LIST
 LINUX_USER = getpass.getuser()
 system_monitor = SysMonitor()
-process_monitor = ProcMonitor()
+process_monitor = ProcMonitor(net_monitor=Setting.NET_MONITOR)
 process_manager = ProcManager()
 # 初始化监控数据
 system_monitor.calc_cpu_percent()
@@ -327,8 +327,8 @@ def process_all_info(pid):
         res["net_recent"] = process_monitor.calc_process_net_speed(pid, speed_type="recent")
         res["net"] = process_monitor.calc_process_net_speed(pid, speed_type="long")
     else:  # nethogs error
-        res["net_recent"] = [-2., -2.]
-        res["net"] = [-2., -2.]
+        res["net_recent"] = [-0.1, -0.1]
+        res["net"] = [-0.1, -0.1]
     logger.info("collect process({}) info.".format(str(pid)))
     return jsonify(res)
 

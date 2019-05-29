@@ -62,22 +62,25 @@ class ProcMonitor(object):
     https://github.com/Watch-Dogs-HIT/Watch_Dogs/blob/3ab4cdc46d0e91c3b427960ad7c29a838480c774/Watch_Dogs/Core/process_monitor.py#L631
     """
 
-    def __init__(self):
+    def __init__(self, net_monitor=False):
         """初始化数据结构、权限信息"""
         self.__monitor_data_init__()
-        self.__process_env_init__()
+        self.__process_env_init__(net_monitor)
 
-    def __process_env_init__(self):
+    def __process_env_init__(self, net_monitor=False):
         """初始化监测环境"""
         # 初始化系统监测
         self.SysMonitor = SysMonitor()
         # 获取netlogs环境
-        self.net_monitor_ability = self.is_libnethogs_install()
-        # 初始化netlogs进程
-        if not self.net_monitor_ability:
-            print "netlogs monitor thread initial failed!"
+        if net_monitor:
+            self.net_monitor_ability = self.is_libnethogs_install()
+            # 初始化netlogs进程
+            if not self.net_monitor_ability:
+                print "netlogs monitor thread initial failed!"
+            else:
+                self.init_nethogs_thread()
         else:
-            self.init_nethogs_thread()
+            self.net_monitor_ability = False
 
     def __monitor_data_init__(self):
         """初始化进程监测数据结构"""
@@ -468,8 +471,6 @@ class ProcMonitor(object):
         计算进程网络上传,下载速度[Kbps, kbps]
         瞬时网络速度计算/长期(5min)网络速度计算
         """
-        # todo : 这里的逻辑经过几次修改写的太难看了,有空的话需要重构一下
-        # note : 为了检测nethogs内容,差异化返回值
         if self.is_process_watched(pid):
             process_info = self.process_monitor_dict["process"][str(pid)]
             if speed_type == "recent":  # 瞬时
