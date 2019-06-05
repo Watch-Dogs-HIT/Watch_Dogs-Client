@@ -15,6 +15,9 @@ Watch_Dogs - Client
 - 取消权限  
     `sudo setcap cap_sys_ptrace+ep ./python2.7`
 
+##### wiki
+若想了解更多, 请参考该项目的中文[wiki](https://github.com/Watch-Dogs-HIT/Watch_Dogs-Client/wiki), 其中主要包含了系统的部署方法和实现思路及改进和不足.
+
 ### 核心功能
 基于Linux proc文件系统实现了远程主机及进程状态检测与管理
 
