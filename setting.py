@@ -14,7 +14,7 @@ import logging
 import logging.config
 
 LOGGER_CONF_NAME = "logger.conf"
-SETTING_JOSN_NAME = "setting.json"
+SETTING_JSON_NAME = "setting.json"
 
 
 class Setting(object):
@@ -30,15 +30,15 @@ class Setting(object):
         return cls._instance
 
     def __init__(self):
-        global LOGGER_CONF_NAME, SETTING_JOSN_NAME
+        global LOGGER_CONF_NAME, SETTING_JSON_NAME
         self.log_init_done = False
         self.logger = None
         now_path = os.path.abspath('.')
         self.log_conf_path = os.path.join(now_path, LOGGER_CONF_NAME)
-        self.setting_json_path = os.path.join(now_path, SETTING_JOSN_NAME)
+        self.setting_json_path = os.path.join(now_path, SETTING_JSON_NAME)
         if not os.path.exists(self.log_conf_path) or not os.path.exists(self.setting_json_path):
             print "配置文件读取异常 : 请检查", os.path.basename(sys.argv[0]).split(".")[0], \
-                ".py路径下是否有", LOGGER_CONF_NAME, SETTING_JOSN_NAME
+                ".py路径下是否有", LOGGER_CONF_NAME, SETTING_JSON_NAME
             exit(-1)
         self.log_init()
         self.static_value_refresh()
