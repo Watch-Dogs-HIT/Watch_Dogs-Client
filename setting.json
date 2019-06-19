@@ -1,10 +1,10 @@
 {
   "comment": "Watch_Dogs-Client 配置文件",
   "author": "h-j-13",
-  "last-update time": "2019-02-22",
+  "git_repo_url": "https://github.com/Watch-Dogs-HIT/Watch_Dogs-Client",
   "allowed_request_addr": [
     "0.0.0.0"
   ],
-  "port": 8000,
+  "port": 8001,
   "net_monitor": false
 }
