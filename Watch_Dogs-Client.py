@@ -471,3 +471,5 @@ if __name__ == "__main__":
     #     debug=False,
     #     threaded=True
     # )
+
+    # bug ：一段时间后检测进程占用内存不断上升？ 50m -> 600m
