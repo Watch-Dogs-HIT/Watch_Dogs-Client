@@ -9,7 +9,7 @@ Watch_Dogs - Client
 ##### 提权方式
 为了获取系统核心数据,不可避免的要涉及到权限的问题.除了最简单的root用户启动程序之外,目前的解决思路如下:     
 在 /usr/bin 目录下执行如下命令
-- 通过能力机制给python解释器提权  
+- 通过[能力](http://man7.org/linux/man-pages/man8/setcap.8.html)机制给python解释器提权  
     `sudo setcap cap_kill,cap_net_raw,cap_dac_read_search,cap_sys_ptrace+ep ./python2.7`
 
 - 取消权限  
