@@ -8,12 +8,12 @@ Watch_Dogs - Client
 
 ##### 提权方式
 为了获取系统核心数据,不可避免的要涉及到权限的问题.除了最简单的root用户启动程序之外,目前的解决思路如下:     
-在 /usr/bin 目录下执行如下命令
+在 /usr/bin 目录下执行如下命令 (*或者其他你正在使用的Python解释器目录*)
 - 通过[能力](http://man7.org/linux/man-pages/man8/setcap.8.html)机制给python解释器提权  
-    `sudo setcap cap_kill,cap_net_raw,cap_dac_read_search,cap_sys_ptrace+ep ./python2.7`
+    `sudo setcap cap_kill,cap_net_raw,cap_dac_read_search,cap_sys_ptrace+ep python2.7`
 
 - 取消权限  
-    `sudo setcap -r ./python2.7`
+    `sudo setcap -r python2.7`
 
 ##### wiki
 若想了解更多, 请参考该项目的中文[wiki](https://github.com/Watch-Dogs-HIT/Watch_Dogs-Client/wiki), 其中主要包含了系统的部署方法和实现思路及改进和不足.
