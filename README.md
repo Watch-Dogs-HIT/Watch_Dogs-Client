@@ -13,7 +13,7 @@ Watch_Dogs - Client
     `sudo setcap cap_kill,cap_net_raw,cap_dac_read_search,cap_sys_ptrace+ep ./python2.7`
 
 - 取消权限  
-    `sudo setcap cap_sys_ptrace+ep ./python2.7`
+    `sudo setcap -r ./python2.7`
 
 ##### wiki
 若想了解更多, 请参考该项目的中文[wiki](https://github.com/Watch-Dogs-HIT/Watch_Dogs-Client/wiki), 其中主要包含了系统的部署方法和实现思路及改进和不足.
