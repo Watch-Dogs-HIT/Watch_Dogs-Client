@@ -67,9 +67,9 @@ Watch_Dogs - Client
 具体实现及思路可参考 [process_monitor.py](https://github.com/Watch-Dogs-HIT/Watch_Dogs/blob/master/Watch_Dogs/Core/process_monitor.py#L497)
 
 ### 数据远程传递
-为了快速开发,基于**flask**实现了监控数据的远程传递.      
-为了安全性考虑,添加了请求来源验证功能.只有运行的请求地址才会得到响应.
-为了方便调试与日常维护,添加了基于python原生logger实现的日志功能.
+为了快速开发,基于**flask**实现了监控数据的远程传递.       
+为了安全性考虑,添加了请求来源验证功能.只有运行的请求地址才会得到响应.      
+为了方便调试与日常维护,添加了基于python原生logger实现的日志功能.  
 
 ### API文档
 以下均为 HTTP `GET` 方法访问
