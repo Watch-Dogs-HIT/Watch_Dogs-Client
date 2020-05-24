@@ -2,7 +2,12 @@
 # encoding:utf-8
 
 import os
+import sys
 import unittest
+
+root_path = os.path.dirname(sys.path[0])
+os.chdir(root_path)
+sys.path.append(root_path)
 
 from Core.prcess_exception import AccessDenied, NoSuchProcess
 from Core.process_manage import ProcManager
@@ -14,7 +19,7 @@ class TestSysMontor(unittest.TestCase):
     def setUp(self):
         self.P = ProcManager()
 
-    def test_process_info(self, test_process_name="mysql"):
+    def test_process_info(self, test_process_name="bash"):
         print "\n-----进程检索测试-----"
         self.assertIsInstance(self.P.get_all_pid(), list)
         print "系统进程个数 :", str(len(self.P.get_all_pid()))
@@ -29,31 +34,34 @@ class TestSysMontor(unittest.TestCase):
         print "进程号 进程名"
         for pid, name in self.P.search_pid_by_keyword(test_process_name):
             print pid, name
-        mysql_process = self.P.search_pid_by_keyword(test_process_name)[0]
-        if mysql_process:
+        try:
+            search_process = self.P.search_pid_by_keyword(test_process_name)[0]
+        except Exception as err:
+            search_process = None
+        if search_process:
             print "查询到{}进程".format(test_process_name)
-            mysql_pid = mysql_process[0]
-            mysql_process_info = self.P.get_process_info(mysql_pid)
-            self.assertIsInstance(mysql_process_info, dict)
+            search_pid = search_process[0]
+            search_process_info = self.P.get_process_info(search_pid)
+            self.assertIsInstance(search_process_info, dict)
             print "进程信息 :"
-            print "进程号 :", mysql_process_info["pid"]
-            print "启动命令 :", mysql_process_info["comm"]
-            print "进程状态 :", mysql_process_info["state"]
-            print "父进程号 :", mysql_process_info["ppid"]
-            print "组进程号 :", mysql_process_info["pgrp"]
-            print "线程数目 :", mysql_process_info["thread num"]
-            print "命令行 :", mysql_process_info["cmdline"]
-            self.assertEqual(mysql_process_info["ppid"],
-                             self.P.get_process_parent_pid(mysql_pid))
-            self.assertEqual(mysql_process_info["pgrp"],
-                             self.P.get_process_group_id(mysql_pid))
-            self.assertIsInstance(self.P.get_same_group_process(mysql_pid), list)
-            print "同组进程 : ", self.P.get_same_group_process(mysql_pid)
-            self.assertIsInstance(self.P.get_all_child_process(mysql_pid), list)
-            print "子进程 : ", self.P.get_all_child_process(mysql_pid)
+            print "进程号 :", search_process_info["pid"]
+            print "启动命令 :", search_process_info["comm"]
+            print "进程状态 :", search_process_info["state"]
+            print "父进程号 :", search_process_info["ppid"]
+            print "组进程号 :", search_process_info["pgrp"]
+            print "线程数目 :", search_process_info["thread num"]
+            print "命令行 :", search_process_info["cmdline"]
+            self.assertEqual(search_process_info["ppid"],
+                             self.P.get_process_parent_pid(search_pid))
+            self.assertEqual(search_process_info["pgrp"],
+                             self.P.get_process_group_id(search_pid))
+            self.assertIsInstance(self.P.get_same_group_process(search_pid), list)
+            print "同组进程 : ", self.P.get_same_group_process(search_pid)
+            self.assertIsInstance(self.P.get_all_child_process(search_pid), list)
+            print "子进程 : ", self.P.get_all_child_process(search_pid)
             print "进程执行地址 : ",
             try:
-                self.P.get_process_execute_path(mysql_pid)
+                self.P.get_process_execute_path(search_pid)
             except AccessDenied:
                 print "权限不足,请检查是否为root账户登录"
 
@@ -65,7 +73,6 @@ class TestSysMontor(unittest.TestCase):
         print "启动测试进程 - just4test.py,进程号 :",
         pid = self.P.start_process(os.path.join(os.getcwd(), "just4test.py"))
         self.assertIsInstance(pid, int)
-        print pid
         test_process_info = self.P.get_process_info(pid)
         self.assertIsInstance(test_process_info, dict)
         print "进程信息 :"
@@ -100,3 +107,6 @@ class TestSysMontor(unittest.TestCase):
             print "行\n行号\t内容"
             for i, l in self.P.get_log_keyword_lines(test_file_full_path, "编程"):
                 print i, l[:30], "..."
+
+if __name__ == '__main__':
+    unittest.main()  

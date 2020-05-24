@@ -5,11 +5,12 @@ import os
 import sys
 import unittest
 
-root_path = os.path.dirname(sys.path[0])
-os.chdir(root_path)
-sys.path.append(root_path)
+print os.getcwd()
+os.chdir(os.getcwd())
 
-from Core.sys_monitor import SysMonitor   
+from Core.sys_monitor import SysMonitor
+
+print os.getcwd()
 
 class TestSysMontor(unittest.TestCase):
     """系统监控功能测试类"""
@@ -90,4 +91,4 @@ class TestSysMontor(unittest.TestCase):
             print "挂载点 :", i[5]
 
 if __name__ == '__main__':
-    unittest.main()  
+    unittest.main()
